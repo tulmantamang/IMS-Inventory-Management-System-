@@ -49,8 +49,19 @@ const updateStock = async ({ productId, quantity, type, reason, userId, supplier
         throw new Error("Invalid transaction type");
     }
 
+    // Safety check: Ensure selling_price exists (Mongoose required field)
+    if (product.selling_price === undefined || product.selling_price === null) {
+        console.warn(`Product ${product.name} (ID: ${productId}) is missing selling_price. Defaulting to 0 for validation.`);
+        product.selling_price = 0;
+    }
+
     product.total_stock = newStock;
-    await product.save();
+    try {
+        await product.save();
+    } catch (saveError) {
+        console.error("Failed to save product in updateStock:", saveError.message);
+        throw saveError;
+    }
 
     const stockLogBody = {
         product: productId,

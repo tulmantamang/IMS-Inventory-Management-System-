@@ -3,8 +3,9 @@ const User = require('../models/Usermodel');
 require('dotenv').config();
 
 module.exports.authmiddleware = async (req, res, next) => {
+    let token;
     try {
-        let token = req.cookies.Inventorymanagmentsystem;
+        token = req.cookies.Inventorymanagmentsystem;
 
         // Fallback to Authorization Header
         if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
@@ -30,7 +31,7 @@ module.exports.authmiddleware = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
-        console.error("Token verification error:", error.message);
+        console.error("Token verification error:", error.message, "Token snippet:", token ? `${token.substring(0, 10)}...` : "NULL/EMPTY");
         return res.status(401).json({ message: "Unauthorized: Invalid or expired token." });
     }
 };

@@ -2,6 +2,7 @@ const { updateStock } = require('../utils/stockUtils');
 const Product = require('../models/Productmodel');
 const Sale = require('../models/Salesmodel');
 const logActivity = require('../libs/logger');
+const PDFDocument = require('pdfkit');
 
 module.exports.createSale = async (req, res) => {
   try {
@@ -97,7 +98,7 @@ module.exports.generateInvoice = async (req, res) => {
     const doc = new PDFDocument({ margin: 50 });
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=invoice-${sale.transactionId}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${sale.invoiceNumber || id}.pdf`);
 
     doc.pipe(res);
 

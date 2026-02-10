@@ -124,6 +124,41 @@ function PurchasePage() {
         setItems([{ productId: "", quantity: "", costPrice: "", batchNumber: "", expiryDate: "" }]);
     };
 
+    const handleDownloadInvoice = (purchaseId) => {
+        const backendUrl = process.env.REACT_APP_BACKEND_URL || "https://advanced-inventory-management-system-v1.onrender.com";
+        const url = `${backendUrl}/api/purchase/${purchaseId}/invoice`;
+        const token = localStorage.getItem('token');
+
+        if (!token || token === "undefined") {
+            toast.error("Session expired. Please login again.");
+            localStorage.removeItem('token');
+            return;
+        }
+
+        fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Error generating invoice");
+                return res.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `purchase-invoice-${purchaseId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(err => {
+                console.error(err);
+                toast.error("Failed to generate purchase invoice");
+            });
+    };
+
     const filteredHistory = history.filter(p =>
         p.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.supplier?.name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -235,12 +270,22 @@ function PurchasePage() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => setSelectedPurchase(p)}
-                                                    className="p-2 text-gray-400 hover:text-primary transition-colors rounded-lg hover:bg-white border border-transparent hover:border-gray-100 shadow-none hover:shadow-sm"
-                                                >
-                                                    <Eye size={18} />
-                                                </button>
+                                                <div className="flex justify-end gap-1">
+                                                    <button
+                                                        onClick={() => setSelectedPurchase(p)}
+                                                        className="p-2 text-gray-400 hover:text-primary transition-colors rounded-lg hover:bg-white border border-transparent hover:border-gray-100 shadow-none hover:shadow-sm"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDownloadInvoice(p._id)}
+                                                        className="p-2 text-gray-400 hover:text-green-500 transition-colors rounded-lg hover:bg-white border border-transparent hover:border-gray-100 shadow-none hover:shadow-sm"
+                                                        title="Download Invoice"
+                                                    >
+                                                        <FileText size={18} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -483,7 +528,7 @@ function PurchasePage() {
                                     <X size={20} />
                                 </button>
                             </div>
-                            <div className="p-8 space-y-8">
+                            <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-1">Supplier</p>
@@ -524,6 +569,14 @@ function PurchasePage() {
                                         <p className="text-3xl font-black text-gray-800 leading-none">Rs. {selectedPurchase.totalAmount?.toLocaleString()}</p>
                                     </div>
                                 </div>
+                            </div>
+                            <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+                                <button
+                                    onClick={() => handleDownloadInvoice(selectedPurchase._id)}
+                                    className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-600 transition shadow-lg shadow-primary/20"
+                                >
+                                    <FileText size={18} /> Download Invoice
+                                </button>
                             </div>
                         </div>
                     </div>

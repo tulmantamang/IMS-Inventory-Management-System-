@@ -98,7 +98,7 @@ module.exports.login = async (req, res) => {
     await logActivity({
       action: "USERLOGIN",
       description: `User ${user.name} logged in.`,
-      entity: "USER",
+      entity: "user",
       entityId: user._id,
       userId: user._id,
       ipAddress: req.ip,
@@ -106,6 +106,7 @@ module.exports.login = async (req, res) => {
 
     return res.status(200).json({
       message: "Login successful",
+      token,
       user: {
         id: user.id,
         name: user.name,
@@ -113,8 +114,7 @@ module.exports.login = async (req, res) => {
         email: user.email,
         role: user.role,
         status: user.status,
-        profilePic: user.profilePic,
-        token
+        profilePic: user.profilePic
       }
     });
 
@@ -275,7 +275,7 @@ module.exports.updateUserSecret = async (req, res) => {
     await logActivity({
       action: "USERUPDATE",
       description: `User ${updatedUser.name} updated by Admin.`,
-      entity: "USER",
+      entity: "user",
       entityId: updatedUser._id,
       userId: req.user?._id,
       ipAddress: req.ip,

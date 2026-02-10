@@ -4,7 +4,7 @@ const logActivity = require('../libs/logger');
 
 module.exports.createCategory = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, status } = req.body;
 
     const userId = req.user._id;
     const ipAddress = req.ip
@@ -13,9 +13,15 @@ module.exports.createCategory = async (req, res) => {
       return res.status(400).json({ message: "Please provide all necessary information." });
     }
 
+    const validStatuses = ["Active", "Inactive"];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value. Must be 'Active' or 'Inactive'." });
+    }
+
     const newCategory = new Category({
-      name,
-      description,
+      name: name.trim(),
+      description: description ? description.trim() : "",
+      status: status || "Active"
     });
 
 
@@ -111,18 +117,31 @@ module.exports.getCategory = async (req, res) => {
 
 module.exports.updateCategory = async (req, res) => {
   try {
-    const { updatedCategory } = req.body
-    const { CategoryId } = req.params
+    const { CategoryId } = req.params;
     const userId = req.user._id;
-    const ipAddress = req.ip
+    const ipAddress = req.ip;
 
+    // Payload might be wrapped in updatedCategory or flat
+    const data = req.body.updatedCategory || req.body;
 
+    if (!data || Object.keys(data).length === 0) {
+      return res.status(400).json({ message: "No update data provided" });
+    }
 
-    const updatingCategory = await Category.findByIdAndUpdate(CategoryId, updatedCategory, { new: true })
+    const { status } = data;
+    const validStatuses = ["Active", "Inactive"];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const updatingCategory = await Category.findByIdAndUpdate(
+      CategoryId,
+      { $set: data },
+      { new: true, runValidators: true }
+    );
 
     if (!updatingCategory) {
-      return res.status(400).json({ message: "Category is not found" })
-
+      return res.status(404).json({ message: "Category not found" });
     }
 
     await logActivity({
@@ -134,14 +153,11 @@ module.exports.updateCategory = async (req, res) => {
       ipAddress: ipAddress,
     });
 
-
-    res.status(200).json({ message: "Category successfully updated" })
-
+    res.status(200).json(updatingCategory)
 
   } catch (error) {
-    res.status(500).json({ message: "Error in update status Category", error: error.message });
+    res.status(500).json({ message: "Error in update Category", error: error.message });
   }
-
 }
 
 

@@ -13,8 +13,7 @@ module.exports.getDashboardStats = async (req, res) => {
 
         // 1. Total Available Stock Quantity
         const totalStockResult = await Product.aggregate([
-            { $match: { isDeleted: false } },
-            { $group: { _id: null, total: { $sum: "$stockQuantity" } } }
+            { $group: { _id: null, total: { $sum: "$total_stock" } } }
         ]);
         const totalAvailableStock = totalStockResult[0]?.total || 0;
 
@@ -32,8 +31,7 @@ module.exports.getDashboardStats = async (req, res) => {
 
         // 3. Number of low-stock items
         const lowStockCount = await Product.countDocuments({
-            isDeleted: false,
-            $expr: { $lte: ["$stockQuantity", "$reorderLevel"] }
+            $expr: { $lte: ["$total_stock", "$reorderLevel"] }
         });
 
         // Recent Activity Logs (Last 10)
@@ -43,9 +41,9 @@ module.exports.getDashboardStats = async (req, res) => {
             .limit(10);
 
         // Inventory Value
-        const products = await Product.find({ isDeleted: false });
+        const products = await Product.find({});
         const inventoryValue = products.reduce((acc, curr) => {
-            return acc + ((curr.stockQuantity || 0) * (curr.price || 0));
+            return acc + ((curr.total_stock || 0) * (curr.current_cost_price || 0));
         }, 0);
 
         // Recent Sales

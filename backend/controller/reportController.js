@@ -57,8 +57,7 @@ module.exports.getSalesReport = async (req, res) => {
             sales.forEach(sale => {
                 doc.text(sale.customerName, 50, y);
                 doc.text(new Date(sale.createdAt).toLocaleDateString(), 150, y);
-                doc.text(sale.paymentMethod, 250, y);
-                doc.text(sale.paymentStatus, 350, y);
+                doc.text(sale.paymentType || "Cash", 250, y);
                 doc.text(`Rs. ${sale.totalAmount.toLocaleString()}`, 450, y, { align: 'right' });
                 total += sale.totalAmount;
                 y += 20;
@@ -77,7 +76,7 @@ module.exports.getSalesReport = async (req, res) => {
 
 module.exports.getStockReport = async (req, res) => {
     try {
-        const products = await Product.find({ isDeleted: false }).populate('category supplier');
+        const products = await Product.find({}).populate('category');
 
         const doc = new PDFDocument({ margin: 50 });
         res.setHeader('Content-Type', 'application/pdf');
@@ -90,7 +89,6 @@ module.exports.getStockReport = async (req, res) => {
         doc.fontSize(10).font('Helvetica-Bold');
         doc.text("Product (SKU)", 50, y);
         doc.text("Category", 200, y);
-        doc.text("Supplier", 300, y);
         doc.text("Stock", 400, y, { align: 'right' });
         doc.text("Price", 500, y, { align: 'right' });
 
@@ -100,9 +98,8 @@ module.exports.getStockReport = async (req, res) => {
         products.forEach(p => {
             doc.text(`${p.name} (${p.sku})`, 50, y);
             doc.text(p.category?.name || "N/A", 200, y);
-            doc.text(p.supplier?.name || "N/A", 300, y);
-            doc.text(`${p.stockQuantity} ${p.unit}`, 400, y, { align: 'right' });
-            doc.text(`Rs. ${p.price}`, 500, y, { align: 'right' });
+            doc.text(`${p.total_stock}`, 400, y, { align: 'right' });
+            doc.text(`Rs. ${p.current_cost_price}`, 500, y, { align: 'right' });
             y += 20;
             if (y > 700) { doc.addPage(); y = 50; }
         });
@@ -136,7 +133,7 @@ module.exports.getSupplierReport = async (req, res) => {
 
         suppliers.forEach(s => {
             doc.text(s.name, 50, y);
-            doc.text(s.contactPerson, 150, y);
+            doc.text(s.contact_person, 150, y);
             doc.text(s.phone, 250, y);
             doc.text(s.email, 350, y);
             doc.text(s.status, 450, y);

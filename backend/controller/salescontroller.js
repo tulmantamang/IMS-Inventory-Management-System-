@@ -1,10 +1,7 @@
-const Sale = require('../models/Salesmodel');
+const { updateStock } = require('../utils/stockUtils');
 const Product = require('../models/Productmodel');
+const Sale = require('../models/Salesmodel');
 const logActivity = require('../libs/logger');
-const { v4: uuidv4 } = require('uuid');
-const mongoose = require('mongoose');
-const PDFDocument = require('pdfkit');
-const StockLog = require('../models/StockLogmodel');
 
 module.exports.createSale = async (req, res) => {
   try {
@@ -12,65 +9,54 @@ module.exports.createSale = async (req, res) => {
     const userId = req.user._id;
 
     if (!products || !products.length) {
-      throw new Error("At least one product is required for a sale.");
+      return res.status(400).json({ message: "At least one product is required for a sale." });
     }
 
+    const invNum = invoiceNumber || `INV-${Date.now()}`;
     let calculatedTotal = 0;
     const processedProducts = [];
-    const stockLogs = [];
 
-    // 1. Initial Validation Loop (Don't modify DB yet)
-    // We check all products first to ensure they exist and have stock
+    // 1. Validation Loop
     for (const item of products) {
       const { product: productId, quantity } = item;
-
-      if (!productId || quantity === undefined || quantity === null || Number(quantity) <= 0) {
-        throw new Error("Invalid product or quantity. Quantity must be greater than zero.");
+      if (!productId || !quantity || Number(quantity) <= 0) {
+        return res.status(400).json({ message: "Invalid product or quantity." });
       }
-
       const productDoc = await Product.findById(productId);
-      if (!productDoc) throw new Error(`Product not found: ${productId}`);
-
-      if (productDoc.stockQuantity < Number(quantity)) {
-        throw new Error(`Insufficient stock for ${productDoc.name}. Available: ${productDoc.stockQuantity}, Requested: ${quantity}`);
+      if (!productDoc) return res.status(404).json({ message: `Product not found: ${productId}` });
+      if (productDoc.status !== 'Active') return res.status(400).json({ message: `Product ${productDoc.name} is Inactive.` });
+      if (productDoc.total_stock < Number(quantity)) {
+        return res.status(400).json({ message: `Insufficient stock for ${productDoc.name}. Available: ${productDoc.total_stock}` });
       }
     }
 
-    // 2. Processing Loop (Apply updates)
+    // 2. Execution Loop (Using updateStock utility)
     for (const item of products) {
-      const { product: productId, quantity, price, batchNumber } = item;
+      const { product: productId, quantity, price } = item;
 
-      const productDoc = await Product.findById(productId);
+      const { product: updatedProd } = await updateStock({
+        productId,
+        quantity: Number(quantity),
+        type: 'OUT',
+        reason: `Sale Invoice: ${invNum}`,
+        userId
+      });
 
-      // Deduct Stock
-      productDoc.stockQuantity -= Number(quantity);
-      await productDoc.save();
-
-      const itemPrice = Number(price || productDoc.price);
+      const itemPrice = Number(price || updatedProd.selling_price);
       calculatedTotal += itemPrice * Number(quantity);
 
       processedProducts.push({
         product: productId,
-        name: productDoc.name,
+        name: updatedProd.name,
         quantity: Number(quantity),
         price: itemPrice,
-        batchNumber: batchNumber || productDoc.batchNumber
-      });
-
-      // Prepare Stock Log data
-      stockLogs.push({
-        product: productId,
-        type: 'OUT',
-        quantity: Number(quantity),
-        reason: `Sale Invoice: ${invoiceNumber || 'NEW_SALE'}`,
-        performedBy: userId,
-        date: saleDate || new Date()
+        costPrice: updatedProd.current_cost_price, // Store cost snapshot
       });
     }
 
     // 3. Create Sale Record
     const sale = new Sale({
-      invoiceNumber: invoiceNumber || `INV-${Date.now()}`,
+      invoiceNumber: invNum,
       customerName: customerName || "Walking Customer",
       products: processedProducts,
       totalAmount: calculatedTotal,
@@ -82,20 +68,12 @@ module.exports.createSale = async (req, res) => {
 
     await sale.save();
 
-    // 4. Save Stock Logs
-    for (const logData of stockLogs) {
-      logData.reason = `Sale Invoice: ${sale.invoiceNumber}`;
-      const log = new StockLog(logData);
-      await log.save();
-    }
-
-    // 5. Activity Log
     await logActivity({
-      action: "New Multi-item Sale",
-      description: `Sale ${sale.invoiceNumber} to ${sale.customerName}. Total: Rs.${calculatedTotal}`,
+      action: "New Sale",
+      description: `Sale ${sale.invoiceNumber} recorded. Total: Rs.${calculatedTotal}`,
       entity: "sale",
       entityId: sale._id,
-      userId: userId,
+      userId,
       ipAddress: req.ip
     });
 
@@ -103,7 +81,7 @@ module.exports.createSale = async (req, res) => {
 
   } catch (error) {
     console.error("Sale Error:", error);
-    res.status(400).json({ message: error.message || "Error recording sale" });
+    res.status(500).json({ message: error.message || "Error recording sale" });
   }
 };
 

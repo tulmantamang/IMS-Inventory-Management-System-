@@ -47,7 +47,7 @@ function ReportsPage() {
   useEffect(() => {
     if (getallproduct && Array.isArray(getallproduct)) {
       setTotalProducts(getallproduct.length);
-      const lowStock = getallproduct.filter((product) => (product.stockQuantity || product.quantity) <= (product.reorderLevel || 0));
+      const lowStock = getallproduct.filter((product) => (product.total_stock || product.quantity) <= (product.reorderLevel || 0));
       setLowStockProducts(lowStock);
     }
   }, [getallproduct]);

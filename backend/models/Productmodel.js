@@ -4,6 +4,7 @@ const ProductSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
+        unique: true,
         trim: true
     },
     sku: {
@@ -21,20 +22,20 @@ const ProductSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    price: {
+    current_cost_price: {
         type: Number,
         required: true,
         min: 0
     },
-    stockQuantity: {
+    selling_price: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    total_stock: {
         type: Number,
         default: 0,
         min: 0
-    },
-    unit: {
-        type: String,
-        default: "pcs",
-        trim: true
     },
     reorderLevel: {
         type: Number,
@@ -45,35 +46,6 @@ const ProductSchema = new mongoose.Schema({
         type: String,
         enum: ["Active", "Inactive"],
         default: "Active"
-    },
-    supplier: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Supplier",
-        required: true
-    },
-    image: {
-        type: String,
-        default: ""
-    },
-    expiryDate: {
-        type: Date,
-        default: null
-    },
-    isDeleted: {
-        type: Boolean,
-        default: false,
-    },
-    batchNumber: {
-        type: String,
-        trim: true
-    },
-    serialNumber: {
-        type: String,
-        trim: true
-    },
-    notes: {
-        type: String,
-        trim: true
     }
 }, { timestamps: true });
 

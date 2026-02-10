@@ -23,20 +23,28 @@ module.exports.addPurchase = async (req, res) => {
         for (const item of items) {
             const { productId, quantity, costPrice, batchNumber, expiryDate } = item;
 
-            // Use updateStock utility
+            // Fetch product with category to check status
+            const Product = require('../models/Productmodel');
+            const productDoc = await Product.findById(productId).populate('category');
+
+            if (!productDoc) throw new Error(`Product with ID ${productId} not found.`);
+            if (productDoc.category && productDoc.category.status !== 'Active') {
+                throw new Error(`Cannot purchase product '${productDoc.name}' because its category '${productDoc.category.name}' is inactive.`);
+            }
+            if (productDoc.status !== 'Active') {
+                throw new Error(`Cannot purchase product '${productDoc.name}' because it is inactive.`);
+            }
+
+            // Use updateStock utility with purchasePrice for WAC calculation
             const { product } = await updateStock({
                 productId,
                 quantity: Number(quantity),
                 type: 'IN',
                 reason: `Purchase Invoice: ${invoiceNumber || 'NEW'}`,
                 userId,
-                supplierId
+                supplierId,
+                purchasePrice: Number(costPrice)
             });
-
-            // Update product specific fields not covered by updateStock
-            if (batchNumber) product.batchNumber = batchNumber;
-            if (expiryDate) product.expiryDate = expiryDate;
-            await product.save();
 
             calculatedTotal += Number(quantity) * Number(costPrice);
             processedItems.push({
@@ -82,7 +90,7 @@ module.exports.getPurchaseHistory = async (req, res) => {
     try {
         const history = await Purchase.find()
             .populate('items.product', 'name sku unit')
-            .populate('supplier', 'name email panVat')
+            .populate('supplier', 'name email pan_vat')
             .sort({ purchaseDate: -1 });
         res.status(200).json(history);
     } catch (error) {

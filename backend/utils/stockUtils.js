@@ -11,44 +11,61 @@ const ActivityLog = require('../models/ActivityLogmodel');
  * @param {string} params.reason - Description for the transaction
  * @param {string} params.userId - User performing the action
  * @param {string} [params.supplierId] - Optional supplier ID
+ * @param {number} [params.purchasePrice] - Transactional purchase price for WAC calculation
  */
-const updateStock = async ({ productId, quantity, type, reason, userId, supplierId }) => {
+const updateStock = async ({ productId, quantity, type, reason, userId, supplierId, purchasePrice }) => {
     const Product = require('../models/Productmodel');
     const StockLog = require('../models/StockLogmodel');
 
     const product = await Product.findById(productId);
     if (!product) throw new Error("Product not found");
 
-    const previousStock = product.stockQuantity;
+    const previousStock = product.total_stock;
+    const oldCost = product.current_cost_price;
     let newStock = previousStock;
 
     if (type === 'IN') {
-        newStock += Math.abs(quantity);
+        const addQty = Math.abs(quantity);
+
+        // Weighted Average Cost Calculation
+        if (purchasePrice !== undefined && purchasePrice !== null) {
+            if (previousStock === 0) {
+                product.current_cost_price = purchasePrice;
+            } else {
+                // Formula: ((old_stock * old_cost) + (new_qty * purchase_price)) / (old_stock + new_qty)
+                const newCost = ((previousStock * oldCost) + (addQty * purchasePrice)) / (previousStock + addQty);
+                product.current_cost_price = Number(newCost.toFixed(2));
+            }
+        }
+
+        newStock += addQty;
     } else if (type === 'OUT') {
         if (previousStock < Math.abs(quantity)) throw new Error("Insufficient stock");
         newStock -= Math.abs(quantity);
     } else if (type === 'ADJUST') {
-        // quantity can be negative (reduction) or positive (addition)
         newStock += quantity;
         if (newStock < 0) throw new Error("Adjustment results in negative stock");
     } else {
         throw new Error("Invalid transaction type");
     }
 
-    product.stockQuantity = newStock;
-    product.status = newStock > 0 ? 'Active' : 'Inactive';
+    product.total_stock = newStock;
     await product.save();
 
-    const stockLog = new StockLog({
+    const stockLogBody = {
         product: productId,
         quantity: Math.abs(quantity),
         type: type,
         reason: reason,
         performedBy: userId,
-        supplier: supplierId || product.supplier,
         previousStock,
-        currentStock: newStock
-    });
+        currentStock: newStock,
+        date: new Date()
+    };
+
+    if (supplierId) stockLogBody.supplier = supplierId;
+
+    const stockLog = new StockLog(stockLogBody);
     await stockLog.save();
 
     return { product, stockLog };

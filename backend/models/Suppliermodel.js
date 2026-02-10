@@ -6,7 +6,7 @@ const SupplierSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    contactPerson: {
+    contact_person: {
         type: String,
         required: true,
         trim: true
@@ -19,14 +19,22 @@ const SupplierSchema = new mongoose.Schema({
     email: {
         type: String,
         trim: true,
-        default: ""
+        lowercase: true,
+        sparse: true,
+        unique: true
+    },
+    supplier_id: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
     },
     address: {
         type: String,
         required: true,
         trim: true
     },
-    panVat: {
+    pan_vat: {
         type: String,
         required: true,
         unique: true,

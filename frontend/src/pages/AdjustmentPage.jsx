@@ -125,7 +125,7 @@ function AdjustmentPage() {
                                             <option value="">Choose item...</option>
                                             {getallproduct?.filter(p => p.status === 'Active').map(p => (
                                                 <option key={p._id} value={p._id}>
-                                                    {p.name} (Stock: {p.stockQuantity ?? 0})
+                                                    {p.name} (Stock: {p.total_stock ?? 0})
                                                 </option>
                                             ))}
                                         </select>

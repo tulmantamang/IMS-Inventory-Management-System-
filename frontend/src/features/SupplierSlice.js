@@ -71,13 +71,11 @@ export const EditSupplier = createAsyncThunk(
         updatedData,
         { withCredentials: true }
       );
-      toast.success("Supplier updated successfully");
       return response.data;
     } catch (error) {
       console.log(error)
       const errorMessage =
         error.response?.data?.message || "Failed to update supplier. Please try again.";
-      toast.error(errorMessage);
       return rejectWithValue(errorMessage);
     }
   }
@@ -96,7 +94,6 @@ const supplierSlice = createSlice({
       })
       .addCase(CreateSupplier.fulfilled, (state, action) => {
         state.isSupplieradd = false;
-        toast.success("Supplier created successfully");
         // Optional: Push to list if structure matches
         if (action.payload.newSupplier) {
           state.getallSupplier.push(action.payload.newSupplier);
@@ -104,7 +101,6 @@ const supplierSlice = createSlice({
       })
       .addCase(CreateSupplier.rejected, (state, action) => {
         state.isSupplieradd = false;
-        toast.error(action.payload || 'Error creating Supplier');
       })
 
 

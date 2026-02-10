@@ -21,7 +21,7 @@ module.exports.createStockLog = async (req, res) => {
             return res.status(404).json({ message: "Product not found." });
         }
 
-        let newStock = product.stockQuantity;
+        let newStock = product.total_stock;
         if (normalizedType === 'IN' || (normalizedType === 'ADJUST' && quantity > 0)) {
             newStock += Number(Math.abs(quantity));
         } else if (normalizedType === 'OUT' || (normalizedType === 'ADJUST' && quantity < 0)) {
@@ -32,7 +32,7 @@ module.exports.createStockLog = async (req, res) => {
             newStock -= absQty;
         }
 
-        product.stockQuantity = newStock;
+        product.total_stock = newStock;
         await product.save();
 
         const log = new StockLog({
@@ -41,7 +41,7 @@ module.exports.createStockLog = async (req, res) => {
             quantity: Number(Math.abs(quantity)),
             reason,
             performedBy: userId,
-            supplier: supplierId || product.supplier // Fallback to product's default supplier
+            supplier: supplierId // Required for accuracy in stock logs
         });
         await log.save();
 

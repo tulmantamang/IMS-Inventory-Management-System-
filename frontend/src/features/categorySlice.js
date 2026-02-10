@@ -69,7 +69,7 @@ export const UpdateCategory = createAsyncThunk(
     try {
       const response = await axiosInstance.put(`category/updatecategory/${categoryId}`, { updatedCategory }, { withCredentials: true });
       toast.success("Category updated successfully");
-      return { categoryId, category: response.data.category || updatedCategory };
+      return { categoryId, category: response.data };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Category update failed");
     }

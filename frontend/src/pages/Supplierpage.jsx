@@ -17,7 +17,7 @@ import { getPurchaseHistory } from "../features/purchaseSlice";
 
 function Supplierpage() {
   const dispatch = useDispatch();
-  const { getallSupplier, searchdata } = useSelector((state) => state.supplier);
+  const { getallSupplier, searchdata, isSupplieradd, iseditedSupplier } = useSelector((state) => state.supplier);
   const { history: purchaseHistory } = useSelector((state) => state.purchase);
   const { getallproduct } = useSelector((state) => state.product);
   const { Authuser } = useSelector((state) => state.auth);
@@ -34,10 +34,11 @@ function Supplierpage() {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   // State for new fields
-  const [contactPerson, setContactPerson] = useState("");
-  const [panVat, setPanVat] = useState("");
+  const [contact_person, setContactPerson] = useState("");
+  const [pan_vat, setPanVat] = useState("");
   const [status, setStatus] = useState("Active");
   const [showHistory, setShowHistory] = useState(false);
+  const [supplier_id, setSupplierId] = useState("");
 
   useEffect(() => {
     dispatch(gettingallSupplier());
@@ -53,6 +54,7 @@ function Supplierpage() {
     setContactPerson("");
     setPanVat("");
     setStatus("Active");
+    setSupplierId("");
     setSelectedSupplier(null);
   };
 
@@ -62,11 +64,11 @@ function Supplierpage() {
 
     const updatedData = {
       name,
-      contactPerson,
+      contact_person,
       phone: Phone,
       email: Email,
       address: Address,
-      panVat,
+      pan_vat,
       status
     };
 
@@ -77,6 +79,8 @@ function Supplierpage() {
         resetForm();
       })
       .catch((err) => {
+        const errorMessage = typeof err === 'string' ? err : err?.message || "Supplier update failed";
+        toast.error(errorMessage);
         console.error("Edit failed:", err);
       });
   };
@@ -87,9 +91,10 @@ function Supplierpage() {
     setPhone(supplier.phone);
     setEmail(supplier.email);
     setAddress(supplier.address);
-    setContactPerson(supplier.contactPerson || "");
-    setPanVat(supplier.panVat || "");
+    setContactPerson(supplier.contact_person || "");
+    setPanVat(supplier.pan_vat || "");
     setStatus(supplier.status || "Active");
+    setSupplierId(supplier.supplier_id || "");
     setIsFormVisible(true);
   };
 
@@ -107,21 +112,25 @@ function Supplierpage() {
     event.preventDefault();
     const supplierInfo = {
       name,
-      contactPerson,
+      contact_person,
       phone: Phone,
       email: Email,
       address: Address,
-      panVat,
+      pan_vat,
       status: "Active"
     };
     dispatch(CreateSupplier(supplierInfo))
       .unwrap()
       .then(() => {
+        toast.success("Supplier created successfully");
         resetForm();
         setIsFormVisible(false);
         dispatch(gettingallSupplier());
       })
       .catch((err) => {
+        console.error("Full Creation Error Record:", err);
+        const errorMessage = typeof err === 'string' ? err : err?.message || "Supplier creation failed";
+        toast.error(errorMessage);
         console.error("Create failed:", err);
       });
   };
@@ -177,51 +186,70 @@ function Supplierpage() {
 
             <form onSubmit={selectedSupplier ? handleEditSubmit : submitSupplier} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+                <label className="block text-sm font-bold text-gray-800 mb-1">Registered Company Name *</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   type="text"
                   className="input-field"
                   required
-                  placeholder="e.g. ABC Trading Pvt Ltd"
+                  placeholder="e.g. Nepal Trading Corporation"
                 />
+                <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Official business name as per registration</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person *</label>
+                <label className="block text-sm font-bold text-gray-800 mb-1">Contact Person *</label>
                 <input
-                  value={contactPerson}
+                  value={contact_person}
                   onChange={(e) => setContactPerson(e.target.value)}
                   type="text"
                   className="input-field"
                   required
-                  placeholder="e.g. John Doe"
+                  placeholder="Full name of representative"
                 />
+                <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Person to contact for orders</p>
               </div>
+
+              {!selectedSupplier && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 mb-1">Supplier Code</label>
+                  <input
+                    value="Auto-generated (e.g. SUP-0001)"
+                    type="text"
+                    className="input-field bg-gray-50 font-mono text-gray-500 italic"
+                    readOnly
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Unique code is assigned on save</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                  <label className="block text-sm font-bold text-gray-800 mb-1">Primary Phone *</label>
                   <input
                     value={Phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    type="number"
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    type="text"
                     className="input-field"
                     required
-                    placeholder="98XXXXXXXX"
+                    maxLength={10}
+                    placeholder="e.g. 9841XXXXXX"
                   />
+                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">10-digit mobile or landline</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">PAN/VAT *</label>
+                  <label className="block text-sm font-bold text-gray-800 mb-1">PAN/VAT Number *</label>
                   <input
-                    value={panVat}
-                    onChange={(e) => setPanVat(e.target.value)}
-                    type="number"
+                    value={pan_vat}
+                    onChange={(e) => setPanVat(e.target.value.replace(/\D/g, ''))}
+                    type="text"
                     className="input-field"
                     required
-                    placeholder="Validation No."
+                    maxLength={9}
+                    placeholder="9-Digit Number"
                   />
+                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Tax registration number</p>
                 </div>
               </div>
 
@@ -237,32 +265,50 @@ function Supplierpage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                <label className="block text-sm font-bold text-gray-800 mb-1">Office Address *</label>
                 <input
                   value={Address}
                   onChange={(e) => setAddress(e.target.value)}
                   type="text"
                   className="input-field"
                   required
-                  placeholder="City, Street"
+                  placeholder="e.g. New Road, Kathmandu"
                 />
               </div>
 
               {selectedSupplier && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-field">
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Supplier ID</label>
+                    <input
+                      value={supplier_id}
+                      className="input-field bg-gray-50 font-mono"
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-field">
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="w-full btn-primary py-3 rounded-lg font-bold shadow mt-4"
+                disabled={isSupplieradd || iseditedSupplier}
+                className={`w-full btn-primary py-3 rounded-lg font-bold shadow mt-4 flex justify-center items-center gap-2 ${isSupplieradd || iseditedSupplier ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                {selectedSupplier ? "Update Supplier" : "Create Supplier"}
+                {isSupplieradd || iseditedSupplier ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  selectedSupplier ? "Update Supplier" : "Create Supplier"
+                )}
               </button>
             </form>
           </div>
@@ -273,11 +319,10 @@ function Supplierpage() {
             <table className="min-w-full text-left">
               <thead className="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
                 <tr>
-                  <th className="px-6 py-4">#</th>
+                  <th className="px-6 py-4">Code</th>
                   <th className="px-6 py-4">Company</th>
                   <th className="px-6 py-4">Contact Person</th>
                   <th className="px-6 py-4">Details</th>
-                  <th className="px-6 py-4">PAN/VAT</th>
                   <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
@@ -286,16 +331,13 @@ function Supplierpage() {
                 {Array.isArray(displaySuppliers) && displaySuppliers.length > 0 ? (
                   displaySuppliers.map((supplier, index) => (
                     <tr key={supplier._id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-gray-500">{index + 1}</td>
+                      <td className="px-6 py-4 font-mono text-xs text-gray-500">{supplier.supplier_id}</td>
                       <td className="px-6 py-4 font-semibold text-gray-900">{supplier.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{supplier.contactPerson}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{supplier.contact_person}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        <div className="font-medium">{supplier.phone}</div>
+                        <div className="font-medium">{supplier.phone} (PAN: {supplier.pan_vat})</div>
                         <div className="text-xs text-blue-600">{supplier.email}</div>
                         <div className="text-xs text-gray-400 mt-1">{supplier.address}</div>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-mono text-gray-600">
-                        {supplier.panVat}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-2 py-1 text-xs rounded-full ${supplier.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -320,12 +362,6 @@ function Supplierpage() {
                             >
                               Edit
                             </button>
-                            <button
-                              onClick={() => handleRemove(supplier._id)}
-                              className="text-red-600 hover:text-red-800 font-medium text-sm transition"
-                            >
-                              Remove
-                            </button>
                           </>
                         ) : (
                           <span className="text-gray-400 text-xs">View Only</span>
@@ -335,7 +371,7 @@ function Supplierpage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="text-center py-8 text-gray-400">
+                    <td colSpan="6" className="text-center py-8 text-gray-400">
                       No Suppliers found.
                     </td>
                   </tr>
@@ -344,60 +380,62 @@ function Supplierpage() {
             </table>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Supplier History Modal */}
-      {showHistory && selectedSupplier && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowHistory(false)} />
-          <div className="bg-white max-w-4xl w-full rounded-2xl shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b flex justify-between items-center bg-gray-50">
-              <div>
-                <h3 className="text-xl font-bold text-gray-800">Procurement History</h3>
-                <p className="text-sm text-primary font-bold uppercase">{selectedSupplier.name}</p>
+      {
+        showHistory && selectedSupplier && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowHistory(false)} />
+            <div className="bg-white max-w-4xl w-full rounded-2xl shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Procurement History</h3>
+                  <p className="text-sm text-primary font-bold uppercase">{selectedSupplier.name}</p>
+                </div>
+                <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-gray-200 rounded-full transition">
+                  <MdKeyboardDoubleArrowLeft className="rotate-180 text-2xl" />
+                </button>
               </div>
-              <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-gray-200 rounded-full transition">
-                <MdKeyboardDoubleArrowLeft className="rotate-180 text-2xl" />
-              </button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-4">
-                {purchaseHistory.filter(p => p.supplier?._id === selectedSupplier._id).length > 0 ? (
-                  purchaseHistory.filter(p => p.supplier?._id === selectedSupplier._id).map((p, idx) => (
-                    <div key={idx} className="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Invoice / Date</p>
-                          <p className="font-mono text-xs font-bold text-primary">{p.invoiceNumber || 'N/A'}</p>
-                          <p className="text-xs text-gray-500"><FormattedTime timestamp={p.purchaseDate} /></p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Amount</p>
-                          <p className="font-black text-gray-800 text-lg">Rs. {p.totalAmount?.toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div className="bg-white rounded-lg border border-gray-200 divide-y">
-                        {p.items?.map((item, i) => (
-                          <div key={i} className="p-2 flex justify-between text-xs">
-                            <span className="font-bold underline decoration-blue-200 underline-offset-4">{item.product?.name}</span>
-                            <span className="text-gray-600">Qty: <b className="text-gray-900">{item.quantity}</b> @ Rs. {item.costPrice}</span>
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-4">
+                  {purchaseHistory.filter(p => p.supplier?._id === selectedSupplier._id).length > 0 ? (
+                    purchaseHistory.filter(p => p.supplier?._id === selectedSupplier._id).map((p, idx) => (
+                      <div key={idx} className="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Invoice / Date</p>
+                            <p className="font-mono text-xs font-bold text-primary">{p.invoiceNumber || 'N/A'}</p>
+                            <p className="text-xs text-gray-500"><FormattedTime timestamp={p.purchaseDate} /></p>
                           </div>
-                        ))}
+                          <div className="text-right">
+                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Total Amount</p>
+                            <p className="font-black text-gray-800 text-lg">Rs. {p.totalAmount?.toLocaleString()}</p>
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg border border-gray-200 divide-y">
+                          {p.items?.map((item, i) => (
+                            <div key={i} className="p-2 flex justify-between text-xs">
+                              <span className="font-bold underline decoration-blue-200 underline-offset-4">{item.product?.name}</span>
+                              <span className="text-gray-600">Qty: <b className="text-gray-900">{item.quantity}</b> @ Rs. {item.costPrice}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 opacity-40">
+                      <p className="italic">No purchase records found for this vendor.</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 opacity-40">
-                    <p className="italic">No purchase records found for this vendor.</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
 

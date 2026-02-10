@@ -4,10 +4,10 @@ const { createCategory, RemoveCategory, getCategory, updateCategory, Searchcateg
 const { authmiddleware, staffmiddleware, adminmiddleware } = require('../middleware/Authmiddleware')
 
 // CRUD operations - Staff and Admin can manage categories
-router.post("/createcategory", authmiddleware, staffmiddleware, createCategory)
+router.post("/createcategory", authmiddleware, adminmiddleware, createCategory)
 router.get("/getcategory", getCategory)
 router.get("/searchcategory", authmiddleware, Searchcategory)
-router.put("/updateCategory", authmiddleware, staffmiddleware, updateCategory)
+router.put("/updatecategory/:CategoryId", authmiddleware, adminmiddleware, updateCategory)
 
 // Delete - Admin only
 router.delete("/removecategory/:CategoryId", authmiddleware, adminmiddleware, RemoveCategory)

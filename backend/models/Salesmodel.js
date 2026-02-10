@@ -21,7 +21,7 @@ const SalesSchema = new mongoose.Schema({
     name: { type: String }, // Snapshot
     quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true, min: 0 }, // Selling price snapshot
-    batchNumber: { type: String }
+    costPrice: { type: Number, required: true, min: 0 }, // Cost price snapshot for profit
   }],
   totalAmount: {
     type: Number,

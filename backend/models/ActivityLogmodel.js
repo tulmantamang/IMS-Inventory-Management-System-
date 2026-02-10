@@ -1,13 +1,11 @@
 const mongoose = require("mongoose");
-const logger=require('../libs/logger')
-
 
 const ActivityLogSchema = new mongoose.Schema(
   {
     action: {
       type: String,
       required: true,
-    
+
     },
     description: {
       type: String,
@@ -16,22 +14,22 @@ const ActivityLogSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false, 
+      required: false,
     },
     entity: {
       type: String,
       required: true,
-      enum: ["product", "category", "order", "user", "system"], 
+      enum: ["product", "category", "order", "user", "system", "supplier"],
     },
     entityId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: false, 
+      required: false,
     },
     ipAddress: {
-        type: String,
-        required: false,
-      },
-    
+      type: String,
+      required: false,
+    },
+
   },
   { timestamps: true }
 

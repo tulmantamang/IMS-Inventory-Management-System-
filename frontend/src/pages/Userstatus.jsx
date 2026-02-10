@@ -18,7 +18,6 @@ import {
   Edit,
   X,
   CheckCircle,
-  AlertCircle,
   UserX,
   Key
 } from "lucide-react";
@@ -27,7 +26,7 @@ import FormattedTime from "../lib/FormattedTime";
 function Userstatus() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { Authuser, allUsers, isFetchingUsers } = useSelector((state) => state.auth);
+  const { Authuser, allUsers } = useSelector((state) => state.auth);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);

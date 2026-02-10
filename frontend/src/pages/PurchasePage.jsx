@@ -13,7 +13,6 @@ import {
     Plus,
     Trash2,
     Calendar,
-    CreditCard,
     FileText,
     Eye,
     X,
@@ -87,8 +86,8 @@ function PurchasePage() {
 
         // Validation
         if (!supplierId) return toast.error("Please select a supplier");
-        if (items.some(item => !item.productId || !item.quantity || !item.costPrice)) {
-            return toast.error("Please fill all required item fields (Product, Qty, Price)");
+        if (items.some(item => !item.productId || Number(item.quantity) <= 0 || Number(item.costPrice) <= 0)) {
+            return toast.error("Please fill all required item fields (Product, Qty > 0, Price > 0)");
         }
 
         const purchaseData = {
@@ -290,7 +289,7 @@ function PurchasePage() {
                                         >
                                             <option value="">Select Vendor...</option>
                                             {getallsupplier?.filter(s => s.status === 'Active').map(s => (
-                                                <option key={s._id} value={s._id}>{s.name} ({s.panVat || 'No PAN'})</option>
+                                                <option key={s._id} value={s._id}>{s.name} ({s.pan_vat || 'No PAN'})</option>
                                             ))}
                                         </select>
                                         {getallsupplier?.filter(s => s.status === 'Active').length === 0 && (
@@ -343,8 +342,8 @@ function PurchasePage() {
                                                         required
                                                     >
                                                         <option value="">Choose Listing...</option>
-                                                        {getallproduct?.map(p => (
-                                                            <option key={p._id} value={p._id}>{p.name} ({p.sku})</option>
+                                                        {getallproduct?.filter(p => p.status === 'Active' && p.category?.status === 'Active').map(p => (
+                                                            <option key={p._id} value={p._id}>{p.name} (SKU: {p.sku})</option>
                                                         ))}
                                                     </select>
                                                 </div>
@@ -352,11 +351,10 @@ function PurchasePage() {
                                                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Qty *</label>
                                                     <input
                                                         type="number"
-                                                        min="1"
-                                                        placeholder="0"
-                                                        className="input-field w-full h-10 text-xs bg-white text-center"
+                                                        onKeyDown={(e) => { if (["-", "e", "E", "+"].includes(e.key)) e.preventDefault(); }}
                                                         value={item.quantity}
                                                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                                        className="input-field w-full h-10 text-xs bg-white text-right"
                                                         required
                                                     />
                                                 </div>
@@ -364,11 +362,13 @@ function PurchasePage() {
                                                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Unit Cost *</label>
                                                     <input
                                                         type="number"
-                                                        min="0"
+                                                        min="0.01"
+                                                        step="0.01"
                                                         placeholder="0.00"
                                                         className="input-field w-full h-10 text-xs bg-white text-right"
                                                         value={item.costPrice}
                                                         onChange={(e) => handleItemChange(index, 'costPrice', e.target.value)}
+                                                        onKeyDown={(e) => { if (["-", "e", "E", "+"].includes(e.key)) e.preventDefault(); }}
                                                         required
                                                     />
                                                 </div>
@@ -432,30 +432,30 @@ function PurchasePage() {
                                             />
                                         </div>
                                     </div>
-                                    <div className="bg-neutral-900 rounded-3xl p-8 text-white flex flex-col justify-between shadow-2xl">
+                                    <div className="bg-white rounded-3xl p-8 text-gray-800 flex flex-col justify-between shadow-xl border border-gray-100">
                                         <div>
-                                            <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mb-4">Final Summary</p>
-                                            <div className="space-y-2 mb-8">
+                                            <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Final Summary</p>
+                                            <div className="space-y-2 mb-8 border-b border-gray-100 pb-4">
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-white/60">Subtotal</span>
-                                                    <span>Rs. {calculateTotal().toLocaleString()}</span>
+                                                    <span className="text-gray-500">Subtotal</span>
+                                                    <span className="font-bold">Rs. {calculateTotal().toLocaleString()}</span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-white/60">Tax (0%)</span>
-                                                    <span>Rs. 0</span>
+                                                    <span className="text-gray-500">Tax (0%)</span>
+                                                    <span className="font-bold">Rs. 0</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="flex justify-between items-end mb-8 border-t border-white/10 pt-4">
-                                                <span className="text-2xl font-black">Grand Total</span>
+                                            <div className="flex justify-between items-end mb-8">
+                                                <span className="text-lg font-bold text-gray-600">Grand Total</span>
                                                 <span className="text-4xl font-black text-primary">Rs. {calculateTotal().toLocaleString()}</span>
                                             </div>
                                             <button
                                                 type="submit"
                                                 disabled={actionLoading || !supplierId}
                                                 className={`w-full h-16 rounded-2xl text-white font-black text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3 shadow-xl ${!supplierId || actionLoading
-                                                    ? 'bg-gray-600 cursor-not-allowed shadow-none'
+                                                    ? 'bg-gray-300 cursor-not-allowed shadow-none'
                                                     : 'bg-primary hover:bg-blue-600 shadow-primary/20'
                                                     }`}
                                             >

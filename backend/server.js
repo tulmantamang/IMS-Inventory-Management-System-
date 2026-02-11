@@ -53,6 +53,8 @@ app.use(cookieParser());
 const purchaserouter = require("./Routers/purchaserouter")
 const adjustmentRouter = require("./Routers/Adjustmentrouter");
 const dashboardRouter = require("./Routers/dashboardRouter");
+const settingRouter = require("./Routers/settingRouter");
+const { seedDefaults } = require("./controller/settingcontroller");
 
 app.use('/api/auth', authrouter);
 app.use('/api/product', productrouter);
@@ -60,16 +62,18 @@ app.use('/api/category', categoryrouter);
 app.use('/api/notification', notificationrouter);
 app.use('/api/sales', salesrouter);
 app.use('/api/supplier', supplierrouter);
-app.use("/api/stock", stockLogRouter); // Changed from stocktransaction to stock
+app.use("/api/stock", stockLogRouter);
 app.use('/api/reports', reportrouter);
 app.use('/api/purchase', purchaserouter);
 app.use('/api/adjustments', adjustmentRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/settings', settingRouter);
 
 // Removed unused routes: inventory, activity, order
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   MongoDBconfig();
+  await seedDefaults();
   console.log(`The server is running at port ${PORT}`);
 });
 

@@ -2,7 +2,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { io } from "socket.io-client";
 import { useEffect, useState } from "react";
 import { getAllActivityLogs, getsingleUserActivityLogs } from "../features/activitySlice";
-import TopNavbar from "../Components/TopNavbar";
 import FormattedTime from "../lib/FormattedTime";
 
 function Activitylogpage() {
@@ -45,9 +44,7 @@ function Activitylogpage() {
 
   return (
     <div className="bg-base-100 min-h-screen">
-      <TopNavbar />
-      <div className="mt-10 ml-5">
-        <h1 className="text-xl font-semibold mb-4">Activity Logs</h1>
+      <div className="mt-4 ml-5">
         <div className="overflow-x-auto">
           <table className="min-w-full bg-base-100 mb-24 border-gray-200 rounded-lg shadow-md">
             <thead className="bg-base-100">

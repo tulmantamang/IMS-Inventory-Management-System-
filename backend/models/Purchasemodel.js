@@ -36,6 +36,26 @@ const PurchaseSchema = new mongoose.Schema({
             type: Date
         }
     }],
+    subtotal: {
+        type: Number,
+        default: 0
+    },
+    discountPercentage: {
+        type: Number,
+        default: 0
+    },
+    discountAmount: {
+        type: Number,
+        default: 0
+    },
+    taxPercentage: {
+        type: Number,
+        default: 0
+    },
+    taxAmount: {
+        type: Number,
+        default: 0
+    },
     totalAmount: {
         type: Number,
         required: true,

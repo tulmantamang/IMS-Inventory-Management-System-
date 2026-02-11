@@ -9,7 +9,7 @@ const AdjustmentSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['Damage', 'Return', 'Correction'],
+        enum: ['INCREASE', 'DECREASE'],
         required: true
     },
     quantity: {
@@ -20,6 +20,11 @@ const AdjustmentSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true
+    },
+    remarks: {
+        type: String,
+        trim: true,
+        default: ''
     },
     adjustedBy: {
         type: mongoose.Schema.Types.ObjectId,

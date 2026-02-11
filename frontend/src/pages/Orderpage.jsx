@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import TopNavbar from "../Components/TopNavbar";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { IoMdAdd } from "react-icons/io";
@@ -191,11 +190,10 @@ function Orderpage() {
 
   return (
     <div className="bg-base-100 min-h-screen">
-      <TopNavbar />
 
-      < OrderStatusChart className="mt-10 mb-10 mx-auto" />
+      < OrderStatusChart className="mt-4 mb-10 mx-auto" />
 
-      <div className="mt-12 ml-5">
+      <div className="mt-4 ml-5">
         <div className="flex items-center space-x-4">
           <input
             type="text"

@@ -8,30 +8,32 @@ const generateToken = async (user, res) => {
     // Accept multiple possible env var names for JWT secret for flexibility
     const secretKey = process.env.SecretKey || process.env.JWT_SECRET || process.env.Secret || 'devsecret';
 
+    const expiresIn = user.sessionTimeout ? `${user.sessionTimeout}m` : '7d';
+
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       secretKey,
-      { expiresIn: '7d' }
+      { expiresIn }
     );
 
-    console.log("Generated JWT:", token); 
+    console.log(`Generated JWT (expires in ${expiresIn}):`, token);
 
-    // Cookie options: use secure and SameSite=None in production only.
-    // For local development set secure=false and sameSite='Lax' so cookies work over http://localhost.
+    // Cookie options
     const isProd = process.env.NODE_ENV === 'production';
+    const maxAge = user.sessionTimeout ? user.sessionTimeout * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+
     res.cookie("Inventorymanagmentsystem", token, {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: maxAge,
       httpOnly: true,
       sameSite: isProd ? 'None' : 'Lax',
       secure: !!isProd,
     });
-    
 
-    return token; 
+    return token;
   } catch (error) {
     console.error("Error generating token:", error.message);
     throw new Error("Failed to generate token");
   }
 };
 
-module.exports=generateToken;
+module.exports = generateToken;

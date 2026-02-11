@@ -29,6 +29,14 @@ const StockLogSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Supplier"
     },
+    previousStock: {
+        type: Number,
+        default: 0
+    },
+    currentStock: {
+        type: Number,
+        default: 0
+    },
     date: {
         type: Date,
         default: Date.now

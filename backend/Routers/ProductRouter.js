@@ -8,7 +8,7 @@ router.post("/addproduct", authmiddleware, staffmiddleware, Addproduct)
 router.put("/editproduct/:productId", authmiddleware, staffmiddleware, EditProduct)
 
 // Admin only Delete/Restore
-router.delete("/removeproduct/:productId", authmiddleware, adminmiddleware, RemoveProduct)
+router.delete("/removeproduct/:productId", authmiddleware, staffmiddleware, RemoveProduct)
 // Read access for all authenticated
 router.get("/getproduct", authmiddleware, getProduct)
 router.get("/searchproduct", authmiddleware, SearchProduct)

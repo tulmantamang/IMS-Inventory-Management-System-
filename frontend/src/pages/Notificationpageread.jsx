@@ -4,7 +4,6 @@ import { getAllNotifications } from "../features/notificationSlice";
 import { io } from "socket.io-client";
 import FormattedTime from "../lib/FormattedTime";
 import image from "../images/user.png";
-import TopNavbar from "../Components/TopNavbar";
 function NotificationPageRead() {
   const dispatch = useDispatch();
   const { notifications } = useSelector((state) => state.notification);
@@ -32,7 +31,6 @@ function NotificationPageRead() {
 
   return (
     <div className="bg-base-100 min-h-screen">
-      <TopNavbar />
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Notifications</h1>
 

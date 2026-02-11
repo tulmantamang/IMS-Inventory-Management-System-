@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { IoMdAdd } from "react-icons/io";
-import TopNavbar from "../Components/TopNavbar";
 import { useDispatch, useSelector } from "react-redux";
 import { gettingallCategory, CreateCategory, RemoveCategory, SearchCategory, UpdateCategory } from "../features/categorySlice";
 import toast from "react-hot-toast";
@@ -112,14 +111,10 @@ function Categorypage() {
 
   return (
     <div className='bg-neutral-50 min-h-screen font-sans text-gray-900'>
-      <TopNavbar />
 
-      <div className="p-8">
+      <div className="px-8 pb-8 pt-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-gray-800 tracking-tight">Product Categories</h1>
-            <p className="text-gray-500 font-medium">Classify and organize your inventory.</p>
-          </div>
+          <div className="hidden"></div>
           {isAdmin && (
             <button
               onClick={() => { resetForm(); setIsFormVisible(true); }}
@@ -132,7 +127,7 @@ function Categorypage() {
         </div>
 
         <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center">
-          <div className="flex-1 min-w-[300px]">
+          <div className="w-full md:flex-1">
             <input
               type='text'
               value={query}
@@ -199,81 +194,83 @@ function Categorypage() {
         )}
 
         <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Category Name</th>
-                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Products</th>
-                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Management</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {Array.isArray(displayCategory) && displayCategory.length > 0 ? (
-                displayCategory.map((cat) => (
-                  <tr key={cat._id} className="hover:bg-blue-50/30 transition group">
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                          <Tag className="w-5 h-5" />
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Category Name</th>
+                  <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Products</th>
+                  <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                  <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Management</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {Array.isArray(displayCategory) && displayCategory.length > 0 ? (
+                  displayCategory.map((cat) => (
+                    <tr key={cat._id} className="hover:bg-blue-50/30 transition group">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <Tag className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-800 leading-tight">{cat.name}</p>
+                            <p className="text-xs text-gray-400 mt-1 line-clamp-1 max-w-[200px]">{cat.description || "No description provided."}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-gray-800 leading-tight">{cat.name}</p>
-                          <p className="text-xs text-gray-400 mt-1 line-clamp-1 max-w-[200px]">{cat.description || "No description provided."}</p>
+                      </td>
+                      <td className="px-8 py-6 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="p-2 bg-gray-50 rounded-lg text-gray-400"><Package className="w-4 h-4" /></div>
+                          <span className="font-black text-gray-700">{cat.productCount || 0}</span>
+                          <span className="text-[10px] font-bold text-gray-300 uppercase">Items</span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-gray-50 rounded-lg text-gray-400"><Package className="w-4 h-4" /></div>
-                        <span className="font-black text-gray-700">{cat.productCount || 0}</span>
-                        <span className="text-[10px] font-bold text-gray-300 uppercase">Items</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 text-center">
-                      <button
-                        onClick={() => toggleStatus(cat)}
-                        disabled={!isAdmin}
-                        className={`mx-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${cat.status === 'Active' ? 'bg-green-50 text-green-600 border border-green-100 hover:bg-green-100' : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'
-                          }`}
-                      >
-                        {cat.status === 'Active' ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                        {cat.status || 'Active'}
-                      </button>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      </td>
+                      <td className="px-8 py-6 text-center">
                         <button
-                          onClick={() => handleEdit(cat)}
-                          className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                          title="Edit Category"
+                          onClick={() => toggleStatus(cat)}
+                          disabled={!isAdmin}
+                          className={`mx-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${cat.status === 'Active' ? 'bg-green-50 text-green-600 border border-green-100 hover:bg-green-100' : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'
+                            }`}
                         >
-                          <Edit className="w-4 h-4" />
+                          {cat.status === 'Active' ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          {cat.status || 'Active'}
                         </button>
-                        <button
-                          onClick={() => handleremove(cat._id)}
-                          className="p-2 bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                          title="Delete Category"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                        <div className="flex justify-end gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleEdit(cat)}
+                            className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                            title="Edit Category"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleremove(cat._id)}
+                            className="p-2 bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                            title="Delete Category"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="text-center py-20">
+                      <div className="flex flex-col items-center opacity-30">
+                        <Tag className="w-16 h-16 mb-4" />
+                        <p className="font-bold text-xl">No Categories Found</p>
+                        <p className="text-sm">Start by adding your first product category.</p>
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="text-center py-20">
-                    <div className="flex flex-col items-center opacity-30">
-                      <Tag className="w-16 h-16 mb-4" />
-                      <p className="font-bold text-xl">No Categories Found</p>
-                      <p className="text-sm">Start by adding your first product category.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import TopNavbar from "../Components/TopNavbar";
 import { IoMdAdd } from "react-icons/io";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,6 +10,7 @@ import {
   EditProduct,
 } from "../features/productSlice";
 import { gettingallCategory } from "../features/categorySlice";
+import { fetchSettings } from "../features/settingsSlice";
 import toast from "react-hot-toast";
 
 function Productpage() {
@@ -19,6 +19,7 @@ function Productpage() {
   );
   const { getallCategory } = useSelector((state) => state.category);
   const { Authuser } = useSelector((state) => state.auth);
+  const { data: settings } = useSelector((state) => state.settings);
   const dispatch = useDispatch();
 
   const isAdmin = Authuser?.role === 'ADMIN';
@@ -41,6 +42,7 @@ function Productpage() {
   useEffect(() => {
     dispatch(gettingallproducts());
     dispatch(gettingallCategory());
+    dispatch(fetchSettings());
   }, [dispatch, editedProduct, isproductadd]);
 
   useEffect(() => {
@@ -163,9 +165,8 @@ function Productpage() {
 
   return (
     <div className="bg-neutral-50 min-h-screen text-gray-900 font-sans">
-      <TopNavbar />
 
-      <div className="p-8">
+      <div className="px-8 pb-8 pt-4">
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
           <input
             type="text"
@@ -318,10 +319,10 @@ function Productpage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right font-medium text-gray-600 text-sm italic">
-                        Rs. {product.current_cost_price || 0}
+                        {settings?.currency_symbol || 'Rs.'} {product.current_cost_price || 0}
                       </td>
                       <td className="px-6 py-4 text-right font-bold text-gray-900">
-                        Rs. {product.selling_price || 0}
+                        {settings?.currency_symbol || 'Rs.'} {product.selling_price || 0}
                       </td>
                       <td className="px-6 py-4 text-center space-x-2" onClick={(e) => e.stopPropagation()}>
                         {isAdmin && (
@@ -393,15 +394,15 @@ function Productpage() {
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Weighted Avg Cost</span>
-                        <span className="font-bold text-gray-900">Rs. {selectedProduct.current_cost_price || 0}</span>
+                        <span className="font-bold text-gray-900">{settings?.currency_symbol || 'Rs.'} {selectedProduct.current_cost_price || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Selling Price</span>
-                        <span className="font-bold text-gray-900">Rs. {selectedProduct.selling_price || 0}</span>
+                        <span className="font-bold text-gray-900">{settings?.currency_symbol || 'Rs.'} {selectedProduct.selling_price || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm pt-2 border-t border-blue-100">
                         <span className="text-gray-600 italic">Profit Margin (Projected)</span>
-                        <span className="font-bold text-green-600">Rs. {(selectedProduct.selling_price - selectedProduct.current_cost_price).toFixed(2)}</span>
+                        <span className="font-bold text-green-600">{settings?.currency_symbol || 'Rs.'} {(selectedProduct.selling_price - selectedProduct.current_cost_price).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Reorder Alert Level</span>
@@ -413,7 +414,7 @@ function Productpage() {
 
                 <div className="mt-8">
                   <h4 className="font-black text-gray-800 mb-4 border-b pb-2 text-sm uppercase tracking-widest">Recent Stock Movements</h4>
-                  <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-white border rounded-xl overflow-hidden shadow-sm overflow-x-auto">
                     <table className="min-w-full text-left text-sm">
                       <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-black">
                         <tr>

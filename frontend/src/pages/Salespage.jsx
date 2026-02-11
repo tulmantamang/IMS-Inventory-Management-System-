@@ -1,25 +1,22 @@
 import React, { useEffect, useState } from "react";
-import TopNavbar from "../Components/TopNavbar";
 import { useDispatch, useSelector } from "react-redux";
 import { gettingallproducts } from "../features/productSlice";
 import { CreateSales, gettingallSales } from "../features/salesSlice";
+import { fetchSettings } from "../features/settingsSlice";
 import toast from "react-hot-toast";
 import {
   ShoppingCart,
   Save,
-  User,
-  Plus,
   Trash2,
-  Calendar,
   FileText,
   Eye,
   X,
   Receipt,
   TrendingUp,
-  Search,
   AlertCircle,
   Package,
-  TrendingDown
+  TrendingDown,
+  BadgePercent
 } from "lucide-react";
 import FormattedTime from "../lib/FormattedTime";
 
@@ -28,6 +25,7 @@ function Salespage() {
   const { Authuser } = useSelector((state) => state.auth);
   const { getallproduct } = useSelector((state) => state.product);
   const { getallsales, iscreatedsales } = useSelector((state) => state.sales);
+  const { data: settings } = useSelector((state) => state.settings);
 
   // Authorization: Admin and Staff
   const userRole = Authuser?.role?.trim().toUpperCase();
@@ -39,6 +37,8 @@ function Salespage() {
   const [paymentType, setPaymentType] = useState("Cash");
   const [notes, setNotes] = useState("");
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [discountPercent, setDiscountPercent] = useState(10);
+  const [taxPercent, setTaxPercent] = useState(13);
 
   // Items State
   const [items, setItems] = useState([{
@@ -52,17 +52,31 @@ function Salespage() {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [hasInitializedSettings, setHasInitializedSettings] = useState(false);
 
   useEffect(() => {
+    dispatch(fetchSettings());
     dispatch(gettingallproducts());
     dispatch(gettingallSales());
   }, [dispatch]);
+
+  // Update defaults when settings are loaded
+  useEffect(() => {
+    if (settings && !hasInitializedSettings) {
+      if (settings.default_discount_percentage !== undefined) {
+        setDiscountPercent(settings.default_discount_percentage);
+      }
+      if (settings.default_tax_percentage !== undefined) {
+        setTaxPercent(settings.default_tax_percentage);
+      }
+      setHasInitializedSettings(true);
+    }
+  }, [settings, hasInitializedSettings]);
 
   // Redirect or block if not authorized
   if (!isAuthorized) {
     return (
       <div className="bg-neutral-50 min-h-screen">
-        <TopNavbar />
         <div className="p-20 text-center">
           <AlertCircle size={64} className="mx-auto text-red-400 mb-4" />
           <h2 className="text-2xl font-bold text-gray-800">Access Restricted</h2>
@@ -132,7 +146,9 @@ function Salespage() {
         product: item.productId,
         quantity: Number(item.quantity),
         price: Number(item.price)
-      }))
+      })),
+      discountPercentage: Number(discountPercent),
+      taxPercentage: Number(taxPercent)
     };
 
     dispatch(CreateSales(salesData))
@@ -153,6 +169,8 @@ function Salespage() {
     setInvoiceNumber(`INV-${Date.now().toString().slice(-6)}`);
     setPaymentType("Cash");
     setNotes("");
+    setDiscountPercent(settings?.default_discount_percentage || 10);
+    setTaxPercent(settings?.default_tax_percentage || 13);
     setItems([{ productId: "", quantity: "", price: "", availableStock: 0 }]);
   };
 
@@ -199,25 +217,19 @@ function Salespage() {
 
   return (
     <div className="bg-neutral-50 min-h-screen font-sans text-gray-900 pb-20">
-      <TopNavbar />
 
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="px-8 pb-8 pt-4 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-800 flex items-center tracking-tight">
-              <ShoppingCart className="mr-3 text-primary" size={32} /> Sales & Revenue
-            </h1>
-            <p className="text-gray-500 mt-1">Real-time point of sale management and performance overview</p>
-          </div>
+          <div className="hidden"></div>
           {isAuthorized && (
             <button
               onClick={() => {
                 setIsFormVisible(true);
                 setInvoiceNumber(`INV-${Date.now().toString().slice(-6)}`);
               }}
-              className="bg-primary hover:bg-blue-600 text-white px-8 py-3 rounded-xl flex items-center shadow-lg transition-all transform hover:-translate-y-1 font-bold"
+              className="bg-primary hover:bg-blue-600 text-white px-8 py-3 rounded-xl shadow-lg transition-all transform hover:-translate-y-1 font-bold"
             >
-              <Plus className="mr-2" size={20} /> New Sales Entry
+              New Sales Entry
             </button>
           )}
         </div>
@@ -236,7 +248,7 @@ function Salespage() {
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase">Daily Revenue</p>
               <p className="text-2xl font-black text-gray-800">
-                Rs. {(getallsales || [])
+                {settings?.currency_symbol || 'Rs.'} {(getallsales || [])
                   .filter(s => new Date(s.saleDate).toDateString() === new Date().toDateString())
                   .reduce((acc, curr) => acc + curr.totalAmount, 0).toLocaleString()}
               </p>
@@ -247,7 +259,7 @@ function Salespage() {
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase">Avg Ticket</p>
               <p className="text-2xl font-black text-gray-800">
-                Rs. {getallsales?.length
+                {settings?.currency_symbol || 'Rs.'} {getallsales?.length
                   ? Math.round(getallsales.reduce((acc, curr) => acc + curr.totalAmount, 0) / getallsales.length).toLocaleString()
                   : 0}
               </p>
@@ -257,16 +269,13 @@ function Salespage() {
 
         {/* Search and Filters */}
         <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search by Invoice, Customer or Product..."
-              className="input-field pl-10 h-10 w-full"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Search by Invoice, Customer or Product..."
+            className="input-field h-10 w-full md:w-96"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         {/* Sales List */}
@@ -304,7 +313,7 @@ function Salespage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right font-black text-gray-800">
-                        Rs. {sale.totalAmount?.toLocaleString()}
+                        {settings?.currency_symbol || 'Rs.'} {sale.totalAmount?.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${sale.paymentType === 'Online'
@@ -363,18 +372,16 @@ function Salespage() {
 
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8">
                 {/* Header Details */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-blue-50/30 rounded-2xl border border-blue-100">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white rounded-2xl border border-gray-200">
                   <div className="col-span-full md:col-span-1">
                     <label className="block text-xs font-black uppercase text-gray-400 mb-2 tracking-widest">Customer Name</label>
-                    <div className="relative group">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        type="text"
-                        className="input-field w-full h-12 text-sm bg-white pl-10"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      className="input-field w-full h-12 text-sm bg-white"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Enter customer name"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-black uppercase text-gray-400 mb-2 tracking-widest">Invoice / Bill #</label>
@@ -403,9 +410,9 @@ function Salespage() {
                     <button
                       type="button"
                       onClick={addItemRow}
-                      className="text-primary hover:text-blue-700 text-xs font-bold flex items-center hover:underline"
+                      className="text-primary hover:text-blue-700 text-xs font-bold hover:underline"
                     >
-                      <Plus size={14} className="mr-1" /> Add Product Row
+                      + Add Product Row
                     </button>
                   </div>
 
@@ -504,21 +511,57 @@ function Salespage() {
                   <div className="bg-white rounded-3xl p-8 text-gray-800 flex flex-col justify-between shadow-xl border border-gray-100">
                     <div>
                       <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Final Summary</p>
-                      <div className="space-y-2 mb-8 border-b border-gray-100 pb-4">
+                      <div className="space-y-4 mb-8 border-b border-gray-100 pb-4">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Subtotal</span>
-                          <span className="font-bold">Rs. {calculateTotal().toLocaleString()}</span>
+                          <span className="text-gray-500 font-bold">Subtotal</span>
+                          <span className="font-bold">{settings?.currency_symbol || 'Rs.'} {calculateTotal().toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Tax (0%)</span>
-                          <span className="font-bold">Rs. 0</span>
+
+                        <div className="flex justify-between items-center text-sm p-3 bg-red-50/30 rounded-xl border border-red-100/50">
+                          <span className="text-gray-600 flex items-center gap-3">
+                            <BadgePercent size={16} className="text-red-400" />
+                            <span className="font-bold">Discount (%)</span>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={discountPercent}
+                                onChange={(e) => setDiscountPercent(e.target.value === "" ? "" : Math.max(0, e.target.value))}
+                                className="w-20 h-9 bg-white border border-red-200 rounded-lg px-2 font-black text-primary transition-all focus:ring-2 focus:ring-primary/20 outline-none text-center"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-red-300">%</span>
+                            </div>
+                          </span>
+                          <span className="font-black text-red-500">- {settings?.currency_symbol || 'Rs.'} {(calculateTotal() * (discountPercent / 100)).toLocaleString()}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-sm p-3 bg-green-50/30 rounded-xl border border-green-100/50">
+                          <span className="text-gray-600 flex items-center gap-3">
+                            <TrendingUp size={16} className="text-green-400" />
+                            <span className="font-bold">Tax (%)</span>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={taxPercent}
+                                onChange={(e) => setTaxPercent(e.target.value === "" ? "" : Math.max(0, e.target.value))}
+                                className="w-20 h-9 bg-white border border-green-200 rounded-lg px-2 font-black text-primary transition-all focus:ring-2 focus:ring-primary/20 outline-none text-center"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-green-300">%</span>
+                            </div>
+                          </span>
+                          <span className="font-black text-green-600">+ {settings?.currency_symbol || 'Rs.'} {((calculateTotal() - (calculateTotal() * (discountPercent / 100))) * (taxPercent / 100)).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between items-end mb-8">
                         <span className="text-lg font-bold text-gray-600">Grand Total</span>
-                        <span className="text-4xl font-black text-primary">Rs. {calculateTotal().toLocaleString()}</span>
+                        <span className="text-4xl font-black text-primary">
+                          {settings?.currency_symbol || 'Rs.'} {(
+                            calculateTotal() -
+                            (calculateTotal() * (discountPercent / 100)) +
+                            ((calculateTotal() - (calculateTotal() * (discountPercent / 100))) * (taxPercent / 100))
+                          ).toLocaleString()}
+                        </span>
                       </div>
                       <button
                         type="submit"
@@ -567,19 +610,21 @@ function Salespage() {
 
                 <div className="space-y-3">
                   <p className="text-xs font-black uppercase text-gray-400 tracking-wider">Line Items</p>
-                  <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
-                    {selectedSale.products?.map((item, idx) => (
-                      <div key={idx} className="p-4 flex justify-between items-center border-b border-gray-200 last:border-0">
-                        <div>
-                          <p className="font-bold text-gray-800">{item.name}</p>
-                          <p className="text-xs text-gray-400 font-mono tracking-tighter">Price: Rs.{item.price.toLocaleString()}</p>
+                  <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 overflow-x-auto">
+                    <div className="min-w-[400px]">
+                      {selectedSale.products?.map((item, idx) => (
+                        <div key={idx} className="p-4 flex justify-between items-center border-b border-gray-200 last:border-0">
+                          <div>
+                            <p className="font-bold text-gray-800">{item.name}</p>
+                            <p className="text-xs text-gray-400 font-mono tracking-tighter">Price: {settings?.currency_symbol || 'Rs.'}{item.price.toLocaleString()}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-black text-gray-700">x {item.quantity}</p>
+                            <p className="text-xs font-bold text-primary">{settings?.currency_symbol || 'Rs.'} {(item.quantity * item.price).toLocaleString()}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-black text-gray-700">x {item.quantity}</p>
-                          <p className="text-xs font-bold text-primary">Rs. {(item.quantity * item.price).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -594,9 +639,23 @@ function Salespage() {
                       <FileText size={16} /> Download Invoice
                     </button>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-1">Grand Total</p>
-                    <p className="text-3xl font-black text-gray-800 leading-none">Rs. {selectedSale.totalAmount?.toLocaleString()}</p>
+                  <div className="text-right space-y-1">
+                    <div className="flex justify-between gap-10 text-xs">
+                      <span className="text-gray-400 font-bold uppercase">Subtotal</span>
+                      <span className="font-bold text-gray-600">{settings?.currency_symbol || 'Rs.'} {selectedSale.subtotal?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between gap-10 text-xs">
+                      <span className="text-gray-400 font-bold uppercase">Discount ({selectedSale.discountPercentage}%)</span>
+                      <span className="font-bold text-red-500">- {settings?.currency_symbol || 'Rs.'} {selectedSale.discountAmount?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between gap-10 text-xs">
+                      <span className="text-gray-400 font-bold uppercase">Tax ({selectedSale.taxPercentage}%)</span>
+                      <span className="font-bold text-green-600">+ {settings?.currency_symbol || 'Rs.'} {selectedSale.taxAmount?.toLocaleString()}</span>
+                    </div>
+                    <div className="pt-2">
+                      <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-1">Grand Total</p>
+                      <p className="text-3xl font-black text-gray-800 leading-none">{settings?.currency_symbol || 'Rs.'} {selectedSale.totalAmount?.toLocaleString()}</p>
+                    </div>
                   </div>
                 </div>
               </div>

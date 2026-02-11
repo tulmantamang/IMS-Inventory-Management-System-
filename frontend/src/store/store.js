@@ -11,6 +11,7 @@ import stocktransactionReducer from '../features/stocktransactionSlice'
 import salesReducer from "../features/salesSlice"
 import purchaseReducer from "../features/purchaseSlice"
 import adjustmentReducer from "../features/adjustmentSlice"
+import settingsReducer from "../features/settingsSlice";
 
 const store = configureStore({
     reducer: {
@@ -24,7 +25,8 @@ const store = configureStore({
         stocktransaction: stocktransactionReducer,
         sales: salesReducer,
         purchase: purchaseReducer,
-        adjustment: adjustmentReducer
+        adjustment: adjustmentReducer,
+        settings: settingsReducer
     }
 })
 export default store;

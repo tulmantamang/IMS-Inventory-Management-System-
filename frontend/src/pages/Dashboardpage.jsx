@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axiosInstance from "../lib/axios";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchSettings } from "../features/settingsSlice";
 import { AlertTriangle, Wallet, Package, Clock, TrendingUp, Users, ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Line } from "react-chartjs-2";
@@ -48,6 +50,8 @@ function Dashboardpage() {
   });
   const [loading, setLoading] = useState(true);
   const { Authuser } = useSelector((state) => state.auth);
+  const { data: settings } = useSelector((state) => state.settings);
+  const dispatch = useDispatch();
 
   const fetchStats = async () => {
     try {
@@ -63,7 +67,8 @@ function Dashboardpage() {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+    dispatch(fetchSettings());
+  }, [dispatch]);
 
   const salesChartData = {
     labels: stats.recentSales.slice().reverse().map(s => new Date(s.createdAt).toLocaleDateString()),
@@ -115,24 +120,22 @@ function Dashboardpage() {
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow"
+      className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4 hover:shadow-md transition-shadow"
     >
-      <div className="flex justify-between items-start">
-        <div className={`p-3 rounded-xl bg-opacity-10 ${colorClass}`}>
-          <Icon className="w-6 h-6" />
-        </div>
+      <div className={`p-3 rounded-2xl bg-opacity-10 ${colorClass}`}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase">{title}</p>
+        <h3 className="text-2xl font-black text-gray-800">
+          {typeof value === 'number' && title.toLowerCase().includes('value') ? `${settings?.currency_symbol || 'Rs.'} ${value.toLocaleString()}` : value}
+        </h3>
         {trend && (
-          <div className="flex items-center text-green-500 text-xs font-bold bg-green-50 px-2 py-1 rounded-full">
+          <div className="flex items-center text-green-500 text-[10px] font-bold mt-1">
             <ArrowUpRight className="w-3 h-3 mr-0.5" />
             {trend}
           </div>
         )}
-      </div>
-      <div className="mt-4">
-        <p className="text-gray-500 text-sm font-medium">{title}</p>
-        <h3 className="text-2xl font-black text-gray-800 mt-1">
-          {typeof value === 'number' && title.toLowerCase().includes('value') ? `Rs. ${value.toLocaleString()}` : value}
-        </h3>
       </div>
     </motion.div>
   );
@@ -144,28 +147,10 @@ function Dashboardpage() {
   );
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50/50 min-h-screen font-sans text-gray-900">
+    <div className="px-8 pb-8 pt-4 bg-gray-50/50 min-h-screen font-sans text-gray-900">
 
       {/* Header */}
-      <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-gray-900">
-            {Authuser?.role?.trim().toUpperCase() === 'ADMIN' ? 'Admin Dashboard' : 'Staff Dashboard'}
-          </h1>
-          <p className="text-gray-500 font-medium">System health and real-time inventory metrics.</p>
-        </div>
-        <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-            {Authuser?.name?.charAt(0) || "U"}
-          </div>
-          <div className="text-sm">
-            <p className="font-bold text-gray-800 leading-none">{Authuser?.name || "User"}</p>
-            <p className="text-gray-400 text-[10px] mt-1 uppercase font-bold tracking-widest">
-              {Authuser?.role?.trim().toUpperCase()} Access
-            </p>
-          </div>
-        </div>
-      </header>
+      {/* Header Removed - Moved to TopNavbar */}
 
       {/* Today's Summary Row */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -249,7 +234,7 @@ function Dashboardpage() {
                     <p className="text-sm font-bold text-gray-800 leading-tight">{log.description}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">{new Date(log.createdAt).toLocaleString()}</span>
-                      <span className="text-[10px] font-bold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-full">{log.userId?.name || 'System'}</span>
+                      <span className="text-[10px] font-bold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-full">{log.userId?.full_name || 'System'}</span>
                     </div>
                   </div>
                 </div>
@@ -285,7 +270,7 @@ function Dashboardpage() {
             </div>
             <div>
               <p className="text-sm font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Lifetime Revenue</p>
-              <h2 className="text-3xl font-black text-gray-900">Rs. {stats.totalSalesValue.toLocaleString()}</h2>
+              <h2 className="text-3xl font-black text-gray-900">{settings?.currency_symbol || 'Rs.'} {stats.totalSalesValue.toLocaleString()}</h2>
             </div>
           </div>
           <div className="h-10 w-px bg-gray-100 hidden md:block"></div>

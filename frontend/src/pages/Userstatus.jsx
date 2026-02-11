@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import TopNavbar from "../Components/TopNavbar";
+import Sidebar from "../Components/Sidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -35,13 +35,12 @@ function Userstatus() {
 
   const [formData, setFormData] = useState({
     userId: "",
-    name: "",
-    username: "",
+    full_name: "",
     email: "",
-    phone: "",
     password: "",
     role: "STAFF",
-    status: "ACTIVE"
+    status: "ACTIVE",
+    profile_image: null
   });
 
   // Check Access
@@ -62,28 +61,40 @@ function Userstatus() {
       setIsEditMode(true);
       setFormData({
         userId: user._id,
-        name: user.name,
-        username: user.username || "",
+        full_name: user.full_name,
         email: user.email,
-        phone: user.phone || "",
         password: "", // Don't show old password
         role: user.role,
-        status: user.status || "ACTIVE"
+        status: user.status || "ACTIVE",
+        profile_image: user.profile_image || null
       });
     } else {
       setIsEditMode(false);
       setFormData({
         userId: "",
-        name: "",
-        username: "",
+        full_name: "",
         email: "",
-        phone: "",
         password: "",
         role: "STAFF",
-        status: "ACTIVE"
+        status: "ACTIVE",
+        profile_image: null
       });
     }
     setIsModalOpen(true);
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 1024 * 1024) {
+        return toast.error("Image size must be less than 1MB");
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, profile_image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleCloseModal = () => {
@@ -108,17 +119,16 @@ function Userstatus() {
 
   const handleDelete = async (userId) => {
     if (userId === Authuser.id) {
-      return toast.error("You cannot delete yourself.");
+      return toast.error("You cannot deactivate yourself.");
     }
-    if (window.confirm("Permanent deletion cannot be undone. Proceed?")) {
+    if (window.confirm("Confirm user deactivation? This user will lose system access.")) {
       dispatch(removeusers(userId));
     }
   };
 
   const filteredUsers = allUsers.filter(u =>
-    (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.username?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase())) &&
     (filterRole === "ALL" || u.role === filterRole)
   );
 
@@ -129,15 +139,11 @@ function Userstatus() {
 
   return (
     <div className="min-h-screen bg-neutral-50 font-sans text-gray-900">
-      <TopNavbar />
 
-      <div className="p-8">
+      <div className="px-8 pb-8 pt-4">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-gray-800 tracking-tight">System Users</h1>
-            <p className="text-gray-500 font-medium">Manage permissions and account status</p>
-          </div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+          <div className="hidden"></div>
           <button
             onClick={() => handleOpenModal()}
             className="bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-2xl flex items-center gap-2 shadow-xl shadow-primary/20 transition-all font-bold group"
@@ -183,7 +189,7 @@ function Userstatus() {
           <div className="flex-1 min-w-[300px]">
             <input
               type="text"
-              placeholder="Search by name, email or username..."
+              placeholder="Search by name or email..."
               className="w-full bg-gray-50 border-none rounded-2xl px-6 py-3 text-sm focus:ring-2 focus:ring-primary outline-none"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -202,70 +208,73 @@ function Userstatus() {
 
         {/* Users Table */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">User Info</th>
-                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Account Info</th>
-                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Role</th>
-                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredUsers.map(user => (
-                <tr key={user._id} className="hover:bg-gray-50/50 transition">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm uppercase">
-                        {user.name?.charAt(0) || '?'}
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-800">{user.name}</p>
-                        <p className="text-xs font-medium text-gray-400">@{user.username || 'n/a'}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-bold text-gray-600">{user.email}</p>
-                    <p className="text-xs text-gray-400">Joined <FormattedTime timestamp={user.createdAt} /></p>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${user.role === 'ADMIN' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
-                      'bg-blue-50 text-blue-600 border border-blue-100'
-                      }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`flex items-center justify-center gap-1 text-[10px] font-black uppercase ${user.status === 'ACTIVE' ? 'text-green-500' : 'text-red-400'
-                      }`}>
-                      {user.status === 'ACTIVE' ? <CheckCircle className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
-                      {user.status || 'ACTIVE'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleOpenModal(user)}
-                        className="p-2 bg-gray-50 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-xl transition-all"
-                        title="Edit User"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user._id)}
-                        className="p-2 bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                        title="Delete User"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[800px]">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Full Name</th>
+                  <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Contact Info</th>
+                  <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Role</th>
+                  <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                  <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredUsers.map(user => (
+                  <tr key={user._id} className="hover:bg-gray-50/50 transition">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm uppercase overflow-hidden">
+                          {user.profile_image ? (
+                            <img src={user.profile_image} alt={user.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            user.full_name?.charAt(0) || '?'
+                          )}
+                        </div>
+                        <p className="font-bold text-gray-800">{user.full_name}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-bold text-gray-600">{user.email}</p>
+                      <p className="text-xs text-gray-400">Joined <FormattedTime timestamp={user.createdAt} /></p>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${user.role === 'ADMIN' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+                        'bg-blue-50 text-blue-600 border border-blue-100'
+                        }`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`flex items-center justify-center gap-1 text-[10px] font-black uppercase ${user.status === 'ACTIVE' ? 'text-green-500' : 'text-red-400'
+                        }`}>
+                        {user.status === 'ACTIVE' ? <CheckCircle className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
+                        {user.status || 'ACTIVE'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenModal(user)}
+                          className="p-2 bg-gray-50 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-xl transition-all"
+                          title="Edit User"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(user._id)}
+                          className="p-2 bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                          title="Deactivate User"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -287,27 +296,31 @@ function Userstatus() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Full Name</label>
-                  <input
-                    required
-                    type="text"
-                    className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
+              <div className="flex justify-center mb-6">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-[2rem] bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden">
+                    {formData.profile_image ? (
+                      <img src={formData.profile_image} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Users className="w-8 h-8 text-gray-300" />
+                    )}
+                  </div>
+                  <label className="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-lg cursor-pointer hover:bg-blue-600 transition-all scale-90 group-hover:scale-100">
+                    <UserPlus className="w-4 h-4" />
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                  </label>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Username</label>
-                  <input
-                    required
-                    type="text"
-                    className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  />
-                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Full Name</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-primary"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                />
               </div>
 
               <div>
@@ -321,34 +334,23 @@ function Userstatus() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Phone</label>
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">
+                  {isEditMode ? 'New Password (Optional)' : 'Default Password'}
+                </label>
+                <div className="relative">
                   <input
-                    type="text"
-                    className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    required={!isEditMode}
+                    type="password"
+                    className="w-full bg-gray-50 border-none rounded-2xl pl-4 pr-10 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-primary"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">
-                    {isEditMode ? 'New Password (Optional)' : 'Default Password'}
-                  </label>
-                  <div className="relative">
-                    <input
-                      required={!isEditMode}
-                      type="password"
-                      className="w-full bg-gray-50 border-none rounded-2xl pl-4 pr-10 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-primary"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    />
-                    <Key className="absolute right-3 top-3.5 w-4 h-4 text-gray-300" />
-                  </div>
+                  <Key className="absolute right-3 top-3.5 w-4 h-4 text-gray-300" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Role Assignment</label>
                   <select

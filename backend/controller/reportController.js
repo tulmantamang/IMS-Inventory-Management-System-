@@ -1,21 +1,26 @@
-const Sale = require('../models/Salesmodel');
-const Product = require('../models/Productmodel');
-const Supplier = require('../models/Suppliermodel');
-const Category = require('../models/Categorymodel');
-const StockLog = require('../models/StockLogmodel');
-const ActivityLog = require('../models/ActivityLogmodel');
-const PDFDocument = require('pdfkit');
+const Setting = require('../models/Settingmodel');
+
+// Helper to get settings map
+const getSettingsMap = async () => {
+    const settings = await Setting.find();
+    return settings.reduce((acc, curr) => {
+        acc[curr.key] = curr.value;
+        return acc;
+    }, {});
+};
 
 // Helper to generate PDF header
-const generateHeader = (doc, title) => {
+const generateHeader = (doc, title, settings = {}) => {
     doc.fillColor("#444444")
         .fontSize(20)
-        .text("Advanced Inventory Management System", 110, 57)
+        .text(settings.company_name || "Advanced Inventory Management System", 50, 50, { align: "center", width: 500 })
         .fontSize(10)
-        .text("System Reports", 200, 80, { align: "right" })
-        .text(title, 200, 95, { align: "right" })
+        .text(settings.company_address || "System Reports", 50, 75, { align: "center", width: 500 })
+        .text(`Phone: ${settings.company_phone || "N/A"} | Email: ${settings.company_email || "N/A"}`, 50, 90, { align: "center", width: 500 })
+        .fontSize(12).font('Helvetica-Bold')
+        .text(title, 50, 110, { align: "center", width: 500 })
         .moveDown();
-    doc.lineCap('butt').moveTo(50, 115).lineTo(550, 115).stroke();
+    doc.lineCap('butt').moveTo(50, 130).lineTo(550, 130).stroke();
 };
 
 module.exports.getSalesReport = async (req, res) => {
@@ -29,7 +34,9 @@ module.exports.getSalesReport = async (req, res) => {
             };
         }
 
-        const sales = await Sale.find(query).sort({ createdAt: -1 });
+        const Sale = require('../models/Salesmodel');
+        const sales = await Sale.find(query).populate('soldBy', 'full_name');
+        const settings = await getSettingsMap();
 
         if (format === 'pdf') {
             const doc = new PDFDocument({ margin: 50 });
@@ -37,7 +44,7 @@ module.exports.getSalesReport = async (req, res) => {
             res.setHeader('Content-Disposition', `attachment; filename=Sales_Report_${startDate || 'All'}.pdf`);
             doc.pipe(res);
 
-            generateHeader(doc, "Sales Report");
+            generateHeader(doc, "Sales Report", settings);
 
             doc.fontSize(12).text(`Period: ${startDate || 'All Time'} to ${endDate || 'Present'}`).moveDown();
 
@@ -58,13 +65,13 @@ module.exports.getSalesReport = async (req, res) => {
                 doc.text(sale.customerName, 50, y);
                 doc.text(new Date(sale.createdAt).toLocaleDateString(), 150, y);
                 doc.text(sale.paymentType || "Cash", 250, y);
-                doc.text(`Rs. ${sale.totalAmount.toLocaleString()}`, 450, y, { align: 'right' });
+                doc.text(`${settings.currency_symbol || 'Rs.'} ${sale.totalAmount.toLocaleString()}`, 450, y, { align: 'right' });
                 total += sale.totalAmount;
                 y += 20;
                 if (y > 700) { doc.addPage(); y = 50; }
             });
 
-            doc.moveDown().fontSize(12).font('Helvetica-Bold').text(`Total Revenue: Rs. ${total.toLocaleString()}`, { align: 'right' });
+            doc.moveDown().fontSize(12).font('Helvetica-Bold').text(`Total Revenue: ${settings.currency_symbol || 'Rs.'} ${total.toLocaleString()}`, { align: 'right' });
             doc.end();
         } else {
             res.status(200).json(sales);
@@ -78,12 +85,13 @@ module.exports.getStockReport = async (req, res) => {
     try {
         const products = await Product.find({}).populate('category');
 
+        const settings = await getSettingsMap();
         const doc = new PDFDocument({ margin: 50 });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'attachment; filename=Inventory_Stock_Report.pdf');
         doc.pipe(res);
 
-        generateHeader(doc, "Inventory Stock Report");
+        generateHeader(doc, "Inventory Stock Report", settings);
 
         let y = 140;
         doc.fontSize(10).font('Helvetica-Bold');
@@ -99,7 +107,7 @@ module.exports.getStockReport = async (req, res) => {
             doc.text(`${p.name} (${p.sku})`, 50, y);
             doc.text(p.category?.name || "N/A", 200, y);
             doc.text(`${p.total_stock}`, 400, y, { align: 'right' });
-            doc.text(`Rs. ${p.current_cost_price}`, 500, y, { align: 'right' });
+            doc.text(`${settings.currency_symbol || 'Rs.'} ${p.current_cost_price}`, 500, y, { align: 'right' });
             y += 20;
             if (y > 700) { doc.addPage(); y = 50; }
         });

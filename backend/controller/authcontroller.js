@@ -1,84 +1,81 @@
 const User = require('../models/Usermodel');
 const bcrypt = require("bcryptjs");
 const generateToken = require('../libs/Tokengenerator');
-const Cloundinary = require('../libs/Cloundinary');
 const logActivity = require('../libs/logger');
 
 module.exports.signup = async (req, res) => {
   try {
-    const { name, username, email, password, phone, role } = req.body;
+    const { full_name, email, password, role } = req.body;
 
-    if (!name || !username || !email || !password) {
+    const Setting = require('../models/Settingmodel');
+    const settingsList = await Setting.find();
+    const settings = settingsList.reduce((acc, curr) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {});
+
+    if (!full_name || !email || !password) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const { role: requestedRole } = req.body;
-    const userRole = (requestedRole || 'STAFF').trim().toUpperCase();
+    const minPassLen = Number(settings.min_password_length || 6);
+    if (password.length < minPassLen) {
+      return res.status(400).json({ error: `Password must be at least ${minPassLen} characters long.` });
+    }
 
-    const duplicatedUser = await User.findOne({
-      $or: [{ email }, { username }]
-    });
+    const requestedRole = (role || 'STAFF').trim().toUpperCase();
 
+    const duplicatedUser = await User.findOne({ email });
     if (duplicatedUser) {
-      const field = duplicatedUser.email === email ? "Email" : "Username";
-      return res.status(400).json({ error: `${field} already exists` });
+      return res.status(400).json({ error: "Email already exists" });
     }
 
     const hashedpassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
-      name,
-      username,
+      full_name,
       email,
-      phone: phone || "",
       password: hashedpassword,
-      role: userRole,
+      role: requestedRole,
       status: 'ACTIVE',
-      profilePic: ""
+      profile_image: req.body.profile_image || null
     });
 
     const savedUser = await newUser.save();
 
-    // Create activity log
     await logActivity({
       action: "USERSIGNUP",
-      description: `User ${name} (@${username}) signed up as ${userRole}.`,
+      description: `User ${full_name} signed up as ${requestedRole}.`,
       entity: "user",
       entityId: savedUser._id,
       userId: req.user ? req.user._id : savedUser._id,
       ipAddress: req.ip,
     });
 
-    // If it's an admin creating a user, don't generate token for the new user for the admin
-    // but the original logic returns user + token. We'll keep compatibility.
     const token = await generateToken(savedUser, res);
 
     res.status(201).json({
       message: "User created successfully",
       user: {
         id: savedUser._id,
-        name: savedUser.name,
-        username: savedUser.username,
+        full_name: savedUser.full_name,
         email: savedUser.email,
         role: savedUser.role,
         status: savedUser.status,
-        profilePic: savedUser.profilePic,
+        profile_image: savedUser.profile_image,
         token,
       },
     });
 
   } catch (error) {
-    console.error("Error during signup:", error.message);
     res.status(400).json({ error: "Error during signup: " + error.message });
   }
 };
 
 module.exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body; // Could be email or username
-    const user = await User.findOne({
-      $or: [{ email: email }, { username: email }]
-    });
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(400).json({ error: "No user found with those credentials" });
@@ -93,11 +90,21 @@ module.exports.login = async (req, res) => {
       return res.status(403).json({ message: 'Account is inactive. Please contact administrator.' });
     }
 
+    const Setting = require('../models/Settingmodel');
+    const settingsList = await Setting.find();
+    const settings = settingsList.reduce((acc, curr) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {});
+
+    const sessionTimeout = Number(settings.session_timeout || 60);
+    user.sessionTimeout = sessionTimeout;
+
     const token = await generateToken(user, res);
 
     await logActivity({
       action: "USERLOGIN",
-      description: `User ${user.name} logged in.`,
+      description: `User ${user.full_name} logged in.`,
       entity: "user",
       entityId: user._id,
       userId: user._id,
@@ -108,13 +115,12 @@ module.exports.login = async (req, res) => {
       message: "Login successful",
       token,
       user: {
-        id: user.id,
-        name: user.name,
-        username: user.username,
+        id: user._id,
+        full_name: user.full_name,
         email: user.email,
         role: user.role,
         status: user.status,
-        profilePic: user.profilePic
+        profile_image: user.profile_image
       }
     });
 
@@ -132,56 +138,6 @@ module.exports.logout = async (req, res) => {
   }
 };
 
-module.exports.updateProfile = async (req, res) => {
-  try {
-    const { profilePic } = req.body; // Expect camelCase
-    const userId = req.user?._id;
-
-    if (!userId) {
-      return res.status(400).json({ message: "User not authenticated" });
-    }
-
-    if (profilePic) {
-      const uploadResponse = await Cloundinary.uploader.upload(profilePic, {
-        folder: "profile_inventory_system",
-        upload_preset: "upload",
-      });
-
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { profilePic: uploadResponse.secure_url },
-        { new: true }
-      );
-
-      return res.status(200).json({
-        message: "Profile updated successfully",
-        updatedUser
-      });
-    }
-  } catch (error) {
-    console.error("Profile update error", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
-  }
-};
-
-module.exports.staffuser = async (req, res) => {
-  try {
-    const staffuser = await User.find({ role: "STAFF" }).select("-password");
-    res.status(200).json(staffuser);
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error", error });
-  }
-};
-
-module.exports.adminuser = async (req, res) => {
-  try {
-    const adminuser = await User.find({ role: "ADMIN" }).select("-password");
-    res.status(200).json(adminuser);
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error", error });
-  }
-};
-
 module.exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find({}).select("-password").sort({ createdAt: -1 });
@@ -196,24 +152,23 @@ module.exports.removeuser = async (req, res) => {
     const { UserId } = req.params;
     const currentUserId = req.user?._id;
 
-    // Prevent self-deletion
     if (UserId === currentUserId?.toString()) {
-      return res.status(400).json({ message: "Admin cannot delete their own account." });
+      return res.status(400).json({ message: "Admin cannot deactivate their own account." });
     }
 
-    const deleteUser = await User.findByIdAndDelete(UserId);
-    if (!deleteUser) return res.status(404).json({ message: "User not found" });
+    const deactivatedUser = await User.findByIdAndUpdate(UserId, { status: 'INACTIVE' }, { new: true });
+    if (!deactivatedUser) return res.status(404).json({ message: "User not found" });
 
     await logActivity({
-      action: "USERDELETE",
-      description: `User ${deleteUser.name} (@${deleteUser.username}) was deleted by Admin.`,
+      action: "USERDEACTIVATE",
+      description: `User ${deactivatedUser.full_name} was deactivated by Admin.`,
       entity: "user",
-      entityId: deleteUser._id,
+      entityId: deactivatedUser._id,
       userId: currentUserId,
       ipAddress: req.ip,
     });
 
-    return res.status(200).json({ message: "User deleted successfully" });
+    return res.status(200).json({ message: "User deactivated successfully" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -222,7 +177,7 @@ module.exports.removeuser = async (req, res) => {
 module.exports.userCounts = async (req, res) => {
   try {
     const counts = await User.aggregate([
-      { $match: {} },
+      { $match: { status: 'ACTIVE' } },
       { $group: { _id: "$role", count: { $sum: 1 } } },
     ]);
     const result = { ADMIN: 0, STAFF: 0 };
@@ -245,12 +200,11 @@ module.exports.checkUser = async (req, res) => {
     res.status(200).json({
       user: {
         id: user._id,
-        name: user.name,
-        username: user.username,
+        full_name: user.full_name,
         email: user.email,
         role: user.role,
         status: user.status,
-        profilePic: user.profilePic,
+        profile_image: user.profile_image
       }
     });
   } catch (error) {
@@ -260,9 +214,15 @@ module.exports.checkUser = async (req, res) => {
 
 module.exports.updateUserSecret = async (req, res) => {
   try {
-    const { userId, name, username, email, phone, role, status, password } = req.body;
+    const { userId, full_name, email, role, status, password } = req.body;
     const normalizedRole = (role || 'STAFF').trim().toUpperCase();
-    const updateData = { name, username, email, phone, role: normalizedRole, status };
+    const updateData = {
+      full_name,
+      email,
+      role: normalizedRole,
+      status,
+      profile_image: req.body.profile_image
+    };
 
     if (password && password.trim() !== "") {
       updateData.password = await bcrypt.hash(password, 10);
@@ -274,7 +234,7 @@ module.exports.updateUserSecret = async (req, res) => {
 
     await logActivity({
       action: "USERUPDATE",
-      description: `User ${updatedUser.name} updated by Admin.`,
+      description: `User ${updatedUser.full_name} updated by Admin.`,
       entity: "user",
       entityId: updatedUser._id,
       userId: req.user?._id,
@@ -282,6 +242,47 @@ module.exports.updateUserSecret = async (req, res) => {
     });
 
     res.status(200).json({ message: "User updated successfully", user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+module.exports.updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { full_name, password, profile_image } = req.body;
+
+    const updateData = {};
+    if (full_name) updateData.full_name = full_name;
+    if (profile_image !== undefined) updateData.profile_image = profile_image; // Allow setting to null
+
+    if (password && password.trim() !== "") {
+      const Setting = require('../models/Settingmodel');
+      const settingsList = await Setting.find();
+      const settings = settingsList.reduce((acc, curr) => {
+        acc[curr.key] = curr.value;
+        return acc;
+      }, {});
+      const minPassLen = Number(settings.min_password_length || 6);
+
+      if (password.length < minPassLen) {
+        return res.status(400).json({ message: `Password must be at least ${minPassLen} characters long.` });
+      }
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true }).select("-password");
+
+    await logActivity({
+      action: "USERPROFILEUPDATE",
+      description: `User ${updatedUser.full_name} updated their profile.`,
+      entity: "user",
+      entityId: updatedUser._id,
+      userId: userId,
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({ message: "Profile updated successfully", user: updatedUser });
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error: error.message });
   }

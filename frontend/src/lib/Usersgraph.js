@@ -2,34 +2,28 @@ import React, { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
 import { useDispatch, useSelector } from "react-redux";
-import { staffUser, adminUser } from "../features/authSlice";
+import { getAllUsers } from "../features/authSlice";
 
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const UserRoleChart = () => {
-  const [userData, setUserData] = useState({ staff: 0, admin: 0 });
-  const { staffuser, adminuser } = useSelector((state) => state.auth);
+  const { allUsers } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    dispatch(staffUser());
-    dispatch(adminUser());
+    dispatch(getAllUsers());
   }, [dispatch]);
 
-  useEffect(() => {
-    setUserData({
-      staff: staffuser?.length || 0,
-      admin: adminuser?.length || 0,
-    });
-  }, [staffuser, adminuser]);
+  const staffCount = allUsers.filter(u => u.role?.trim().toUpperCase() === "STAFF" && u.status === 'ACTIVE').length;
+  const adminCount = allUsers.filter(u => u.role?.trim().toUpperCase() === "ADMIN" && u.status === 'ACTIVE').length;
 
   const data = {
     labels: ["Staff", "Admin"],
     datasets: [
       {
-        label: "Number of Users",
-        data: [userData.staff, userData.admin],
-        backgroundColor: ["#3b82f6", "#a855f7"], // Blue for Staff, Purple for Admin
+        label: "Number of Active Users",
+        data: [staffCount, adminCount],
+        backgroundColor: ["#3b82f6", "#a855f7"],
         borderColor: ["#2563eb", "#9333ea"],
         borderWidth: 1,
       },

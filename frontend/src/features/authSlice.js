@@ -6,8 +6,6 @@ const initialState = {
   Authuser: JSON.parse(localStorage.getItem("user")) || null,
   isUserSignup: false,
   allUsers: [],
-  staffuser: [], // Initialized as array for reports
-  adminuser: [], // Initialized as array for reports
   userCounts: { ADMIN: 0, STAFF: 0 },
   isUserLogin: false,
   token: localStorage.getItem("token") || null,
@@ -16,14 +14,11 @@ const initialState = {
   isFetchingUsers: false,
 };
 
-
 export const signup = createAsyncThunk(
   "auth/signup",
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post("auth/signup", credentials);
-      // For Admin-driven signup, we might not want to overwrite local storage
-      // But if it's the personal signup, we do.
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.error || "Signup failed");
@@ -31,7 +26,6 @@ export const signup = createAsyncThunk(
   }
 );
 
-// Login
 export const login = createAsyncThunk(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
@@ -47,7 +41,6 @@ export const login = createAsyncThunk(
   }
 );
 
-// Logout
 export const logout = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
@@ -82,26 +75,6 @@ export const updateUsers = createAsyncThunk('auth/updateUser', async (userData, 
   }
 });
 
-export const staffUser = createAsyncThunk('auth/staffuser', async (_, { rejectWithValue }) => {
-  try {
-    const response = await axiosInstance.get('auth/staffuser');
-    return response.data
-  } catch (error) {
-    return rejectWithValue(error.response?.data?.message || 'Failed to get staff user');
-  }
-})
-
-
-export const adminUser = createAsyncThunk('auth/adminuser', async (_, { rejectWithValue }) => {
-  try {
-    const response = await axiosInstance.get('auth/adminuser');
-    return response.data
-  } catch (error) {
-    return rejectWithValue(error.response?.data?.message || 'Failed to get admin user');
-  }
-})
-
-
 export const getUserCounts = createAsyncThunk('auth/userCounts', async (_, { rejectWithValue }) => {
   try {
     const response = await axiosInstance.get('auth/usercounts');
@@ -118,7 +91,7 @@ export const removeusers = createAsyncThunk("auth/removeuser", async (UserId, { 
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || 'Failed to delete user');
   }
-})
+});
 
 export const checkAuth = createAsyncThunk("auth/check", async (_, { rejectWithValue }) => {
   try {
@@ -155,7 +128,7 @@ const authSlice = createSlice({
         state.Authuser = action.payload.user;
         state.token = action.payload.token;
         state.userRole = action.payload.user.role?.trim().toUpperCase();
-        toast.success("Welcome, " + action.payload.user.name);
+        toast.success("Welcome, " + action.payload.user.full_name);
       })
       .addCase(login.rejected, (state, action) => {
         state.isUserLogin = false;
@@ -180,16 +153,12 @@ const authSlice = createSlice({
         state.isFetchingUsers = false;
       })
 
-      .addCase(staffUser.fulfilled, (state, action) => {
-        state.staffuser = action.payload;
-      })
-
-      .addCase(adminUser.fulfilled, (state, action) => {
-        state.adminuser = action.payload;
-      })
-
       .addCase(updateUsers.fulfilled, (state, action) => {
         state.allUsers = state.allUsers.map(u => u._id === action.payload.user._id ? action.payload.user : u);
+        if (state.Authuser && state.Authuser.id === action.payload.user._id) {
+          state.Authuser = { ...state.Authuser, ...action.payload.user };
+          localStorage.setItem("user", JSON.stringify(state.Authuser));
+        }
         toast.success("User updated successfully");
       })
 

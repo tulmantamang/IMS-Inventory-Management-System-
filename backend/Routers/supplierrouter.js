@@ -9,13 +9,13 @@ router.use((req, res, next) => {
 });
 
 // CRUD operations - Staff and Admin can manage suppliers
-router.post("/createsupplier", authmiddleware, adminmiddleware, createSupplier);
+router.post("/createsupplier", authmiddleware, staffmiddleware, createSupplier);
 router.get("/getallsupplier", authmiddleware, getAllSuppliers);
 router.get("/:supplierId", authmiddleware, getSupplierById);
 router.get("/searchSupplier", authmiddleware, searchSupplier);
-router.put("/updatesupplier/:supplierId", authmiddleware, adminmiddleware, editSupplier);
+router.put("/updatesupplier/:supplierId", authmiddleware, staffmiddleware, editSupplier);
 
-// Delete - Admin only
-router.delete("/:supplierId", authmiddleware, adminmiddleware, deleteSupplier);
+// Delete - Staff and Admin
+router.delete("/:supplierId", authmiddleware, staffmiddleware, deleteSupplier);
 
 module.exports = router;

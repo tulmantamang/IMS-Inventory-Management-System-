@@ -12,7 +12,7 @@ function LoginPage() {
   const navigate = useNavigate();
 
   const schema = yup.object().shape({
-    email: yup.string().required("Email or Username is required"),
+    email: yup.string().email("Invalid email").required("Email address is required"),
     password: yup.string().required("Password is required"),
   });
 
@@ -57,12 +57,12 @@ function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2 ml-1">Email or Username</label>
+              <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2 ml-1">Email Address</label>
               <input
-                type="text"
+                type="email"
                 {...register("email")}
                 className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-bold text-gray-700"
-                placeholder="john.doe or admin@example.com"
+                placeholder="admin@example.com"
               />
               {errors.email && <p className="text-red-500 text-xs mt-2 ml-1 font-bold">{errors.email.message}</p>}
             </div>

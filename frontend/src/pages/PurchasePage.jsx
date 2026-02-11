@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import TopNavbar from "../Components/TopNavbar";
 import { useDispatch, useSelector } from "react-redux";
 import { gettingallproducts } from "../features/productSlice";
 import { gettingallSupplier } from "../features/SupplierSlice";
@@ -18,8 +17,10 @@ import {
     X,
     ClipboardList,
     TrendingUp,
-    Search
+    Search,
+    BadgePercent
 } from "lucide-react";
+import { fetchSettings } from "../features/settingsSlice";
 import FormattedTime from "../lib/FormattedTime";
 
 function PurchasePage() {
@@ -28,6 +29,7 @@ function PurchasePage() {
     const { getallSupplier: getallsupplier } = useSelector((state) => state.supplier);
     const { history, loading: actionLoading } = useSelector((state) => state.purchase);
     const { Authuser } = useSelector((state) => state.auth);
+    const { data: settings } = useSelector((state) => state.settings);
 
     // Permissions
     const isAdmin = Authuser?.role === 'ADMIN';
@@ -40,6 +42,8 @@ function PurchasePage() {
     const [paymentType, setPaymentType] = useState("Cash");
     const [notes, setNotes] = useState("");
     const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
+    const [discountPercent, setDiscountPercent] = useState(0);
+    const [taxPercent, setTaxPercent] = useState(0);
 
     // Items State
     const [items, setItems] = useState([{
@@ -55,11 +59,26 @@ function PurchasePage() {
     const [selectedPurchase, setSelectedPurchase] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
 
+    const [hasInitializedSettings, setHasInitializedSettings] = useState(false);
+
     useEffect(() => {
         dispatch(gettingallproducts());
         dispatch(gettingallSupplier());
         dispatch(getPurchaseHistory());
+        dispatch(fetchSettings());
     }, [dispatch]);
+
+    useEffect(() => {
+        if (settings && !hasInitializedSettings) {
+            if (settings.purchase_default_tax !== undefined) {
+                setTaxPercent(settings.purchase_default_tax);
+            }
+            if (settings.purchase_default_discount !== undefined) {
+                setDiscountPercent(settings.purchase_default_discount);
+            }
+            setHasInitializedSettings(true);
+        }
+    }, [settings, hasInitializedSettings]);
 
     const addItemRow = () => {
         setItems([...items, { productId: "", quantity: "", costPrice: "", batchNumber: "", expiryDate: "" }]);
@@ -100,7 +119,9 @@ function PurchasePage() {
                 ...item,
                 quantity: Number(item.quantity),
                 costPrice: Number(item.costPrice)
-            }))
+            })),
+            discountPercentage: Number(discountPercent),
+            taxPercentage: Number(taxPercent)
         };
 
         dispatch(addPurchase(purchaseData))
@@ -122,6 +143,8 @@ function PurchasePage() {
         setPaymentType("Cash");
         setNotes("");
         setItems([{ productId: "", quantity: "", costPrice: "", batchNumber: "", expiryDate: "" }]);
+        setDiscountPercent(settings?.purchase_default_discount || 0);
+        setTaxPercent(settings?.purchase_default_tax || 0);
     };
 
     const handleDownloadInvoice = (purchaseId) => {
@@ -166,22 +189,16 @@ function PurchasePage() {
 
     return (
         <div className="bg-neutral-50 min-h-screen font-sans text-gray-900 pb-20">
-            <TopNavbar />
 
-            <div className="p-8 max-w-7xl mx-auto">
+            <div className="px-8 pb-8 pt-4 max-w-7xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-gray-800 flex items-center tracking-tight">
-                            <ShoppingBag className="mr-3 text-primary" size={32} /> Inventory Procurement
-                        </h1>
-                        <p className="text-gray-500 mt-1">Manage bulk purchases, invoices, and stock receipts</p>
-                    </div>
+                    <div className="hidden"></div>
                     {hasAccess && (
                         <button
                             onClick={() => setIsFormVisible(true)}
-                            className="bg-primary hover:bg-blue-600 text-white px-8 py-3 rounded-xl flex items-center shadow-lg transition-all transform hover:-translate-y-1 font-bold"
+                            className="bg-primary hover:bg-blue-600 text-white px-8 py-3 rounded-xl shadow-lg transition-all transform hover:-translate-y-1 font-bold"
                         >
-                            <Plus className="mr-2" size={20} /> New Purchase Order
+                            New Purchase Order
                         </button>
                     )}
                 </div>
@@ -200,7 +217,7 @@ function PurchasePage() {
                         <div>
                             <p className="text-xs font-bold text-gray-400 uppercase">Recent (30 Days)</p>
                             <p className="text-2xl font-black text-gray-800">
-                                {history.filter(p => new Date(p.purchaseDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}
+                                {settings?.currency_symbol || "Rs."} {history.filter(p => new Date(p.purchaseDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).reduce((acc, curr) => acc + curr.totalAmount, 0).toLocaleString()}
                             </p>
                         </div>
                     </div>
@@ -215,16 +232,13 @@ function PurchasePage() {
 
                 {/* Search and Filters */}
                 <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <div className="relative w-full md:w-96">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search by Invoice or Supplier..."
-                            className="input-field pl-10 h-10 w-full"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search by Invoice or Supplier..."
+                        className="input-field h-10 w-full md:w-96"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
 
                 {/* Purchase List */}
@@ -262,7 +276,7 @@ function PurchasePage() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-gray-800">
-                                                Rs. {p.totalAmount?.toLocaleString()}
+                                                {settings?.currency_symbol || "Rs."} {p.totalAmount?.toLocaleString()}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-700 border border-green-200">
@@ -320,7 +334,7 @@ function PurchasePage() {
 
                             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8">
                                 {/* Header Details */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-blue-50/30 rounded-2xl border border-blue-100">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white rounded-2xl border border-gray-200">
                                     <div className="col-span-full md:col-span-1">
                                         <div className="flex justify-between items-center mb-2">
                                             <label className="block text-xs font-black uppercase text-gray-400 tracking-widest">Supplier</label>
@@ -369,16 +383,16 @@ function PurchasePage() {
                                         <button
                                             type="button"
                                             onClick={addItemRow}
-                                            className="text-primary hover:text-blue-700 text-xs font-bold flex items-center hover:underline"
+                                            className="text-primary hover:text-blue-700 text-xs font-bold hover:underline"
                                         >
-                                            <Plus size={14} className="mr-1" /> Add Product Row
+                                            + Add Product Row
                                         </button>
                                     </div>
 
                                     <div className="space-y-3">
                                         {items.map((item, index) => (
-                                            <div key={index} className="grid grid-cols-12 gap-2 items-start p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                                <div className="col-span-12 md:col-span-4">
+                                            <div key={index} className="grid grid-cols-12 gap-4 items-start p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                                <div className="col-span-12 lg:col-span-4">
                                                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product *</label>
                                                     <select
                                                         value={item.productId}
@@ -392,7 +406,7 @@ function PurchasePage() {
                                                         ))}
                                                     </select>
                                                 </div>
-                                                <div className="col-span-4 md:col-span-2">
+                                                <div className="col-span-6 lg:col-span-2">
                                                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Qty *</label>
                                                     <input
                                                         type="number"
@@ -403,7 +417,7 @@ function PurchasePage() {
                                                         required
                                                     />
                                                 </div>
-                                                <div className="col-span-4 md:col-span-2">
+                                                <div className="col-span-6 lg:col-span-2">
                                                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Unit Cost *</label>
                                                     <input
                                                         type="number"
@@ -480,21 +494,57 @@ function PurchasePage() {
                                     <div className="bg-white rounded-3xl p-8 text-gray-800 flex flex-col justify-between shadow-xl border border-gray-100">
                                         <div>
                                             <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Final Summary</p>
-                                            <div className="space-y-2 mb-8 border-b border-gray-100 pb-4">
+                                            <div className="space-y-4 mb-8 border-b border-gray-100 pb-4">
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-gray-500">Subtotal</span>
-                                                    <span className="font-bold">Rs. {calculateTotal().toLocaleString()}</span>
+                                                    <span className="text-gray-500 font-bold">Subtotal</span>
+                                                    <span className="font-bold">{settings?.currency_symbol || 'Rs.'} {calculateTotal().toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-gray-500">Tax (0%)</span>
-                                                    <span className="font-bold">Rs. 0</span>
+
+                                                <div className="flex justify-between items-center text-sm p-3 bg-red-50/30 rounded-xl border border-red-100/50">
+                                                    <span className="text-gray-600 flex items-center gap-3">
+                                                        <BadgePercent size={16} className="text-red-400" />
+                                                        <span className="font-bold">Discount (%)</span>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="number"
+                                                                value={discountPercent}
+                                                                onChange={(e) => setDiscountPercent(e.target.value === "" ? "" : Math.max(0, e.target.value))}
+                                                                className="w-20 h-9 bg-white border border-red-200 rounded-lg px-2 font-black text-primary transition-all focus:ring-2 focus:ring-primary/20 outline-none text-center"
+                                                            />
+                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-red-300">%</span>
+                                                        </div>
+                                                    </span>
+                                                    <span className="font-black text-red-500">- {settings?.currency_symbol || 'Rs.'} {(calculateTotal() * (discountPercent / 100)).toLocaleString()}</span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center text-sm p-3 bg-green-50/30 rounded-xl border border-green-100/50">
+                                                    <span className="text-gray-600 flex items-center gap-3">
+                                                        <TrendingUp size={16} className="text-green-400" />
+                                                        <span className="font-bold">Tax (%)</span>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="number"
+                                                                value={taxPercent}
+                                                                onChange={(e) => setTaxPercent(e.target.value === "" ? "" : Math.max(0, e.target.value))}
+                                                                className="w-20 h-9 bg-white border border-green-200 rounded-lg px-2 font-black text-primary transition-all focus:ring-2 focus:ring-primary/20 outline-none text-center"
+                                                            />
+                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-green-300">%</span>
+                                                        </div>
+                                                    </span>
+                                                    <span className="font-black text-green-600">+ {settings?.currency_symbol || 'Rs.'} {((calculateTotal() - (calculateTotal() * (discountPercent / 100))) * (taxPercent / 100)).toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div>
                                             <div className="flex justify-between items-end mb-8">
                                                 <span className="text-lg font-bold text-gray-600">Grand Total</span>
-                                                <span className="text-4xl font-black text-primary">Rs. {calculateTotal().toLocaleString()}</span>
+                                                <span className="text-4xl font-black text-primary">
+                                                    {settings?.currency_symbol || 'Rs.'} {(
+                                                        calculateTotal() -
+                                                        (calculateTotal() * (discountPercent / 100)) +
+                                                        ((calculateTotal() - (calculateTotal() * (discountPercent / 100))) * (taxPercent / 100))
+                                                    ).toLocaleString()}
+                                                </span>
                                             </div>
                                             <button
                                                 type="submit"
@@ -564,9 +614,23 @@ function PurchasePage() {
                                         <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-1">Notes</p>
                                         <p className="text-xs text-gray-500 italic leading-relaxed">{selectedPurchase.notes || "No internal notes provided for this transaction."}</p>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-1">Grand Total</p>
-                                        <p className="text-3xl font-black text-gray-800 leading-none">Rs. {selectedPurchase.totalAmount?.toLocaleString()}</p>
+                                    <div className="text-right space-y-1">
+                                        <div className="flex justify-between gap-10 text-xs">
+                                            <span className="text-gray-400 font-bold uppercase">Subtotal</span>
+                                            <span className="font-bold text-gray-600">{settings?.currency_symbol || 'Rs.'} {selectedPurchase.subtotal?.toLocaleString() || selectedPurchase.totalAmount?.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between gap-10 text-xs">
+                                            <span className="text-gray-400 font-bold uppercase">Discount ({selectedPurchase.discountPercentage || 0}%)</span>
+                                            <span className="font-bold text-red-500">- {settings?.currency_symbol || 'Rs.'} {selectedPurchase.discountAmount?.toLocaleString() || 0}</span>
+                                        </div>
+                                        <div className="flex justify-between gap-10 text-xs">
+                                            <span className="text-gray-400 font-bold uppercase">Tax ({selectedPurchase.taxPercentage || 0}%)</span>
+                                            <span className="font-bold text-green-600">+ {settings?.currency_symbol || 'Rs.'} {selectedPurchase.taxAmount?.toLocaleString() || 0}</span>
+                                        </div>
+                                        <div className="pt-2">
+                                            <p className="text-xs font-black uppercase text-gray-400 tracking-wider mb-1">Grand Total</p>
+                                            <p className="text-3xl font-black text-gray-800 leading-none">{settings?.currency_symbol || 'Rs.'} {selectedPurchase.totalAmount?.toLocaleString()}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

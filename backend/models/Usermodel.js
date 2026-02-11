@@ -1,23 +1,14 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-    name: {
+    full_name: {
         type: String,
         required: true
-    },
-    username: {
-        type: String,
-        required: true,
-        unique: true
     },
     email: {
         type: String,
         required: true,
         unique: true
-    },
-    phone: {
-        type: String,
-        default: ""
     },
     password: {
         type: String,
@@ -28,14 +19,14 @@ const UserSchema = new mongoose.Schema({
         enum: ['ADMIN', 'STAFF'],
         default: 'STAFF',
     },
-    profilePic: {
-        type: String,
-        default: ""
-    },
     status: {
         type: String,
         enum: ['ACTIVE', 'INACTIVE'],
         default: 'ACTIVE'
+    },
+    profile_image: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 

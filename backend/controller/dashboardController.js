@@ -29,10 +29,21 @@ module.exports.getDashboardStats = async (req, res) => {
         const todayStockIn = stockFlow.find(sf => sf._id === 'IN')?.total || 0;
         const todayStockOut = stockFlow.find(sf => sf._id === 'OUT')?.total || 0;
 
+        const Setting = require('../models/Settingmodel');
+        const settingsList = await Setting.find();
+        const settings = settingsList.reduce((acc, curr) => {
+            acc[curr.key] = curr.value;
+            return acc;
+        }, {});
+
         // 3. Number of low-stock items
-        const lowStockCount = await Product.countDocuments({
-            $expr: { $lte: ["$total_stock", "$reorderLevel"] }
-        });
+        let lowStockCount = 0;
+        if (settings.enable_low_stock_alert !== false) {
+            lowStockCount = await Product.countDocuments({
+                $expr: { $lte: ["$total_stock", "$reorderLevel"] },
+                isDeleted: false
+            });
+        }
 
         // Recent Activity Logs (Last 10)
         const recentActivities = await ActivityLog.find()

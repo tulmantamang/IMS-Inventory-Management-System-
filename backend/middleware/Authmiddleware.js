@@ -28,6 +28,10 @@ module.exports.authmiddleware = async (req, res, next) => {
             return res.status(401).json({ message: "Unauthorized: User not found." });
         }
 
+        if (user.status === 'INACTIVE') {
+            return res.status(403).json({ message: "Access denied. Account is inactive." });
+        }
+
         req.user = user;
         next();
     } catch (error) {
@@ -41,8 +45,18 @@ module.exports.adminmiddleware = async (req, res, next) => {
     if (!user) {
         return res.status(403).json({ message: "Access denied. Not authenticated." });
     }
+
+    const DrawingSetting = require('../models/Settingmodel');
+    const settingsList = await DrawingSetting.find();
+    const settings = settingsList.reduce((acc, curr) => {
+        acc[curr.key] = curr.value;
+        return acc;
+    }, {});
+
+    const rbacEnabled = settings.enable_rbac !== false;
     const role = user.role?.trim().toUpperCase();
-    if (role !== "ADMIN") {
+
+    if (rbacEnabled && role !== "ADMIN") {
         return res.status(403).json({ message: "Access denied. Admin role required." });
     }
     next();

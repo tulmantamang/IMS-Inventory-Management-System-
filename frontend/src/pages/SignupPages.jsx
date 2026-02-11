@@ -12,10 +12,8 @@ function SignupPage() {
   const navigator = useNavigate();
 
   const schema = yup.object().shape({
-    name: yup.string().required("Full Name is required"),
-    username: yup.string().required("Username is required"),
+    full_name: yup.string().required("Full Name is required"),
     email: yup.string().email("Invalid email").required("Email is required"),
-    phone: yup.string().optional(),
     password: yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
     role: yup.string().oneOf(['ADMIN', 'STAFF'], "Invalid role").required("Role assignment is required"),
   });
@@ -48,27 +46,15 @@ function SignupPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
-                <input
-                  type="text"
-                  {...register("name")}
-                  className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-bold text-sm"
-                  placeholder="John Doe"
-                />
-                {errors.name && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.name.message}</p>}
-              </div>
-              <div>
-                <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1">Username</label>
-                <input
-                  type="text"
-                  {...register("username")}
-                  className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-bold text-sm"
-                  placeholder="johndoe123"
-                />
-                {errors.username && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.username.message}</p>}
-              </div>
+            <div>
+              <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
+              <input
+                type="text"
+                {...register("full_name")}
+                className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-bold text-sm"
+                placeholder="John Doe"
+              />
+              {errors.full_name && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.full_name.message}</p>}
             </div>
 
             <div>
@@ -82,33 +68,22 @@ function SignupPage() {
               {errors.email && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.email.message}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1">Phone (Optional)</label>
-                <input
-                  type="text"
-                  {...register("phone")}
-                  className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-bold text-sm"
-                  placeholder="+977"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1">Security Key</label>
-                <input
-                  type="password"
-                  {...register("password")}
-                  className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-bold text-sm"
-                  placeholder="••••••••"
-                />
-                {errors.password && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.password.message}</p>}
-              </div>
+            <div>
+              <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1">Security Key</label>
+              <input
+                type="password"
+                {...register("password")}
+                className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-bold text-sm"
+                placeholder="••••••••"
+              />
+              {errors.password && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.password.message}</p>}
             </div>
 
             <div>
               <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1">Access Level</label>
               <select
                 {...register("role")}
-                className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-black text-xs text-gray-600 appearance-none"
+                className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none font-black text-xs text-gray-600 appearance-none transition-all"
               >
                 <option value="STAFF">STAFF MEMBER</option>
                 <option value="ADMIN">ADMINISTRATOR</option>

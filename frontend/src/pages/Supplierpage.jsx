@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
-import TopNavbar from "../Components/TopNavbar";
 import { useDispatch, useSelector } from "react-redux";
 import { IoMdAdd } from "react-icons/io";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
+import { Package as PackageIcon } from "lucide-react";
 import {
   CreateSupplier,
   gettingallSupplier,
   deleteSupplier,
-  SearchSupplier,
   EditSupplier,
 } from "../features/SupplierSlice";
 import { gettingallproducts } from "../features/productSlice";
@@ -19,12 +18,10 @@ function Supplierpage() {
   const dispatch = useDispatch();
   const { getallSupplier, searchdata, isSupplieradd, iseditedSupplier } = useSelector((state) => state.supplier);
   const { history: purchaseHistory } = useSelector((state) => state.purchase);
-  const { getallproduct } = useSelector((state) => state.product);
   const { Authuser } = useSelector((state) => state.auth);
 
   // Strictly ADMIN vs STAFF
   const isAdmin = Authuser?.role === 'ADMIN';
-  const isStaff = Authuser?.role === 'STAFF';
 
   const [query, setQuery] = useState("");
   const [name, setName] = useState("");
@@ -98,16 +95,6 @@ function Supplierpage() {
     setIsFormVisible(true);
   };
 
-  const handleRemove = async (SupplierId) => {
-    if (!isAdmin) {
-      toast.error("Only Admin can delete suppliers");
-      return;
-    }
-    if (window.confirm("Are you sure?")) {
-      dispatch(deleteSupplier(SupplierId));
-    }
-  };
-
   const submitSupplier = async (event) => {
     event.preventDefault();
     const supplierInfo = {
@@ -139,13 +126,21 @@ function Supplierpage() {
 
   return (
     <div className="bg-neutral-50 min-h-screen text-gray-900 font-sans">
-      <TopNavbar />
 
-      <div className="p-8">
+      <div className="px-8 pb-8 pt-4">
         {/* Stats Card */}
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-900 mb-8 w-64">
-          <h1 className="text-gray-500 text-sm font-semibold uppercase">Total Suppliers</h1>
-          <p className="text-3xl font-bold text-gray-800 mt-2">{getallSupplier?.length || "0"}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start">
+              <div className="p-3 rounded-xl bg-blue-500 bg-opacity-10 text-blue-600">
+                <PackageIcon className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-gray-500 text-sm font-medium uppercase tracking-wider leading-none">Total Suppliers</p>
+              <h3 className="text-2xl font-black text-gray-800 mt-2">{getallSupplier?.length || "0"}</h3>
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">

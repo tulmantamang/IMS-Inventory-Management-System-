@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import TopNavbar from "../Components/TopNavbar";
 import { IoMdAdd } from "react-icons/io";
 import { MdClose } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
@@ -81,11 +80,10 @@ function NotificationPage() {
 
   return (
     <div className="bg-base-100 min-h-screen">
-      <TopNavbar />
 
-      <div className="max-w-3xl bg-base-100 mx-auto mt-10">
+      <div className="max-w-3xl bg-base-100 mx-auto mt-4">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Notifications</h1>
+          <div className="hidden"></div>
           <button
             onClick={() => setIsFormVisible(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition"

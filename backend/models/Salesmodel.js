@@ -23,6 +23,32 @@ const SalesSchema = new mongoose.Schema({
     price: { type: Number, required: true, min: 0 }, // Selling price snapshot
     costPrice: { type: Number, required: true, min: 0 }, // Cost price snapshot for profit
   }],
+  subtotal: {
+    type: Number,
+    required: true,
+    min: 0,
+    default: 0
+  },
+  discountPercentage: {
+    type: Number,
+    min: 0,
+    default: 10
+  },
+  discountAmount: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  taxPercentage: {
+    type: Number,
+    min: 0,
+    default: 13
+  },
+  taxAmount: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
   totalAmount: {
     type: Number,
     required: true,

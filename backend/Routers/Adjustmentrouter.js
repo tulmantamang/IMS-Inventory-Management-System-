@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { createAdjustment, getAdjustmentsByProduct, getAllAdjustments } = require('../controller/Adjustmentcontroller');
-const { authmiddleware, staffmiddleware } = require('../middleware/Authmiddleware');
+const { authmiddleware, staffmiddleware, adminmiddleware } = require('../middleware/Authmiddleware');
 
-// Admin and Staff can manage adjustments
-router.post('/', authmiddleware, staffmiddleware, createAdjustment);
-router.get('/', authmiddleware, staffmiddleware, getAllAdjustments);
+// Admin only can manage adjustments
+router.post('/', authmiddleware, adminmiddleware, createAdjustment);
+router.get('/', authmiddleware, adminmiddleware, getAllAdjustments);
 router.get('/:productId', authmiddleware, getAdjustmentsByProduct);
 
 module.exports = router;

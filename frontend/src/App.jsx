@@ -16,6 +16,7 @@ import Userstatus from "./pages/Userstatus";
 import ReportsPage from "./pages/ReportsPage";
 import PurchasePage from "./pages/PurchasePage"; // New
 import SettingsPage from "./pages/SettingsPage"; // New
+import ProfilePage from "./pages/ProfilePage"; // New import
 import ProtectedRoute from "./lib/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
 
@@ -62,6 +63,7 @@ function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="Userstatus" element={<Userstatus />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
 
           {/* STAFF ROUTES */}
@@ -84,6 +86,7 @@ function App() {
 
             {/* Reports */}
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
         </Routes>
       </div>

@@ -4,14 +4,11 @@ import authReducer from "../features/authSlice";
 import productReducer from "../features/productSlice"
 import categoryReducer from "../features/categorySlice"
 import supplierReducer from "../features/SupplierSlice"
-import activityReducer from '../features/activitySlice'
-import orderReducer from "../features/orderSlice"
-import notificationReducer from "../features/notificationSlice"
-import stocktransactionReducer from '../features/stocktransactionSlice'
 import salesReducer from "../features/salesSlice"
 import purchaseReducer from "../features/purchaseSlice"
 import adjustmentReducer from "../features/adjustmentSlice"
 import settingsReducer from "../features/settingsSlice";
+import stocktransactionReducer from "../features/stocktransactionSlice"
 
 const store = configureStore({
     reducer: {
@@ -19,14 +16,11 @@ const store = configureStore({
         product: productReducer,
         category: categoryReducer,
         supplier: supplierReducer,
-        activity: activityReducer,
-        order: orderReducer,
-        notification: notificationReducer,
-        stocktransaction: stocktransactionReducer,
         sales: salesReducer,
         purchase: purchaseReducer,
         adjustment: adjustmentReducer,
-        settings: settingsReducer
+        settings: settingsReducer,
+        stocktransaction: stocktransactionReducer
     }
 })
 export default store;

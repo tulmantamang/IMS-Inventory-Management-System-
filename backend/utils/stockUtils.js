@@ -1,6 +1,5 @@
 const Product = require('../models/Productmodel');
 const StockLog = require('../models/StockLogmodel');
-const ActivityLog = require('../models/ActivityLogmodel');
 
 /**
  * Standardizes stock updates and transaction logging.

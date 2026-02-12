@@ -1,19 +1,48 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import logo1 from '../images/logo1.png'
+import React from "react";
+import { Link } from "react-router-dom";
+
 function Navbar() {
   return (
-    <div className="bg-gray-800">
-      <nav className="flex justify-between items-center py-4 px-10">
+    <header className="bg-white sticky top-0 z-50 border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
 
-        <img src={logo1} className='w-56' alt="sample logo"></img>
-        <h2 className="text-white text-2xl font-bold">Inventory Management System</h2>
-        <div>
-          <button className="text-white px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none transition duration-300 mr-4">           <Link to='/LoginPage'>Login In</Link></button>
-          <button className="text-blue-600 px-6 py-2 bg-white rounded-lg hover:bg-gray-100 focus:outline-none transition duration-300">           <Link to='/SignupPage'>Sign Up</Link></button>
+        {/* Brand */}
+        <Link to="/" className="text-2xl font-bold tracking-tight text-gray-900">
+          Inventory<span className="text-indigo-600"> Management System</span>
+        </Link>
+
+        {/* Navigation */}
+        <nav className="hidden md:flex items-center space-x-10 text-gray-600 font-medium">
+          <a href="#features" className="hover:text-indigo-600 transition duration-200">
+            Features
+          </a>
+          <a href="#how-it-works" className="hover:text-indigo-600 transition duration-200">
+            How It Works
+          </a>
+          <a href="#contact" className="hover:text-indigo-600 transition duration-200">
+            Contact
+          </a>
+        </nav>
+
+        {/* Auth */}
+        <div className="flex items-center space-x-6">
+          <Link
+            to="/LoginPage"
+            className="hidden md:block text-gray-700 hover:text-indigo-600 transition duration-200"
+          >
+            Login
+          </Link>
+
+          <Link
+            to="/SignupPage"
+            className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition duration-300 shadow-sm"
+          >
+            Get Started
+          </Link>
         </div>
-      </nav>
-    </div>
+
+      </div>
+    </header>
   );
 }
 

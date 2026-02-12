@@ -1,43 +1,113 @@
 import React from "react";
-import { FaFacebook, FaTwitter, FaLinkedin, FaInstagram } from "react-icons/fa";
+import { FaFacebookF, FaTwitter, FaLinkedinIn, FaInstagram } from "react-icons/fa";
 
 function Footer() {
   return (
-    <footer className="bg-blue-950 text-white py-8">
-      <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+    <footer className="bg-white border-t border-gray-100 mt-28">
+      <div className="max-w-7xl mx-auto px-6 py-20 grid grid-cols-1 md:grid-cols-4 gap-12">
 
+        {/* Brand */}
         <div>
-          <h2 className="text-2xl font-semibold">InventoryPro</h2>
-          <p className="text-gray-300 mt-2">Efficient Inventory Management, Simplified.</p>
-          <p className="text-sm text-gray-400 mt-4">© {new Date().getFullYear()} InventoryPro. All rights reserved.</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Inventory<span className="text-indigo-600"> Management System</span>
+          </h2>
+          <p className="text-gray-600 text-sm leading-relaxed">
+            A modern inventory management platform designed to help businesses
+            manage stock, track sales, generate invoices, and analyze performance
+            — all in one secure system.
+          </p>
         </div>
 
-
+        {/* Product */}
         <div>
-          <h3 className="text-lg font-medium mb-3">Quick Links</h3>
-          <ul className="space-y-2">
-            <li><a href="#!" className="text-gray-300 hover:text-white">Dashboard</a></li>
-            <li><a href="#!" className="text-gray-300 hover:text-white">Products</a></li>
-            <li><a href="#!" className="text-gray-300 hover:text-white">Reports</a></li>
-            <li><a href="#!" className="text-gray-300 hover:text-white">Settings</a></li>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-5">
+            Product
+          </h3>
+          <ul className="space-y-3 text-sm text-gray-600">
+            <li>
+              <a href="#features" className="hover:text-indigo-600 transition duration-200">
+                Features
+              </a>
+            </li>
+            <li>
+              <a href="#how-it-works" className="hover:text-indigo-600 transition duration-200">
+                How It Works
+              </a>
+            </li>
+            <li>
+              <a href="#contact" className="hover:text-indigo-600 transition duration-200">
+                Contact
+              </a>
+            </li>
           </ul>
         </div>
 
-
+        {/* Company */}
         <div>
-          <h3 className="text-lg font-medium mb-3">Contact Us</h3>
-          <p className="text-gray-300">Email: support@inventorypro.com</p>
-          <p className="text-gray-300">Phone: 022-338-983-902</p>
-          <p className="text-gray-300">Address: 123 Inventory St, Tech City</p>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-5">
+            Company
+          </h3>
+          <ul className="space-y-3 text-sm text-gray-600">
+            <li>
+              <a href="#!" className="hover:text-indigo-600 transition duration-200">
+                About Us
+              </a>
+            </li>
+            <li>
+              <a href="#!" className="hover:text-indigo-600 transition duration-200">
+                Privacy Policy
+              </a>
+            </li>
+            <li>
+              <a href="#!" className="hover:text-indigo-600 transition duration-200">
+                Terms & Conditions
+              </a>
+            </li>
+          </ul>
+        </div>
 
+        {/* Social */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-5">
+            Connect With Us
+          </h3>
 
-          <div className="flex space-x-4 mt-4">
-            <a href="#!" className="text-gray-300 hover:text-white text-xl"><FaFacebook /></a>
-            <a href="#!" className="text-gray-300 hover:text-white text-xl"><FaTwitter /></a>
-            <a href="#!" className="text-gray-300 hover:text-white text-xl"><FaLinkedin /></a>
-            <a href="#!" className="text-gray-300 hover:text-white text-xl"><FaInstagram /></a>
+          <div className="flex space-x-4 text-gray-500">
+            <a
+              href="#!"
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:border-indigo-600 hover:text-indigo-600 transition duration-300"
+            >
+              <FaFacebookF size={14} />
+            </a>
+
+            <a
+              href="#!"
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:border-indigo-600 hover:text-indigo-600 transition duration-300"
+            >
+              <FaTwitter size={14} />
+            </a>
+
+            <a
+              href="#!"
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:border-indigo-600 hover:text-indigo-600 transition duration-300"
+            >
+              <FaLinkedinIn size={14} />
+            </a>
+
+            <a
+              href="#!"
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:border-indigo-600 hover:text-indigo-600 transition duration-300"
+            >
+              <FaInstagram size={14} />
+            </a>
           </div>
         </div>
+
+      </div>
+
+      {/* Bottom */}
+      <div className="border-t border-gray-100 py-6 text-center text-sm text-gray-500">
+        © {new Date().getFullYear()} Inventory Management System. All rights reserved.
       </div>
     </footer>
   );

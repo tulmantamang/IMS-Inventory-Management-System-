@@ -1,20 +1,9 @@
-const ActivityLog = require("../models/ActivityLogmodel");
+// ActivityLog model removed - logging disabled
 
 const logActivity = async ({ action, description, entity, entityId, userId, ipAddress }) => {
-  try {
-    const newActivity = new ActivityLog({
-      action,
-      description,
-      entity,
-      entityId,
-      userId,
-      ipAddress,
-    });
-
-    await newActivity.save();
-  } catch (error) {
-    console.error("Error logging activity:", error);
-  }
+  // Activity logging disabled - ActivityLog model was removed
+  // This is now a no-op function to maintain backward compatibility
+  return;
 };
 
 module.exports = logActivity;

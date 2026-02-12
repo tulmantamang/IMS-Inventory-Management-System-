@@ -1,80 +1,127 @@
-import React, { useState } from 'react';
-import { FaArrowRightLong, FaPlus, FaMinus } from "react-icons/fa6";
-import Navbar from '../Components/Navbar';
+import React from "react";
+import Navbar from "../Components/Navbar";
 import Footer from "../Components/Footer";
-import { Link } from 'react-router-dom';
+import { Link } from "react-router-dom";
 
 function HomePage() {
-  const [arrowShow, setArrowShow] = useState(false);
-  const [openFAQ, setOpenFAQ] = useState(null);
-
-  const handleButtonHover = () => {
-    setArrowShow(true);
-  };
-
-  const toggleFAQ = (index) => {
-    setOpenFAQ(openFAQ === index ? null : index);
-  };
-
   return (
-    <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 text-indigo-900 overflow-hidden'>
+    <div className="bg-white text-gray-900 overflow-hidden">
       <Navbar />
 
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
-        
-        <div className="absolute inset-0 opacity-30 animate-gradient">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-100/40 to-purple-100/40"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-100/40 to-teal-100/40"></div>
-        </div>
+      {/* ================= HERO ================= */}
+      <section className="bg-gradient-to-br from-indigo-600 to-blue-600 text-white py-32">
+        <div className="max-w-7xl mx-auto px-6 text-center">
 
-        <div className="text-center max-w-2xl relative z-10 mt-10">
-          <h1 className='text-lg text-indigo-600 mb-10 animate-pulse'>✧ Modern and Scalable</h1>
-          <h1 className="text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600">
-            Comprehensive Inventory Management Tools
+          <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6">
+            Inventory Management System <br />
+            <span className="text-indigo-200">
+              Designed for Growing Businesses
+            </span>
           </h1>
-          <p className="text-xl text-gray-700 mb-8">
-            Experience the perfect blend of power and simplicity. Connect your data, teams, and customers with our AI-driven CRM platform that scales with your business.
+
+          <p className="text-lg md:text-xl opacity-90 max-w-3xl mx-auto mb-10">
+            Inventory Management System helps you manage stock, track sales, control purchases,
+            and generate real-time reports — all from one secure platform.
           </p>
 
-          <hr className='border-t border-indigo-200 mb-10' />
+          <div className="flex justify-center gap-6">
+            <Link
+              to="/SignupPage"
+              className="px-8 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:scale-105 transition duration-300 shadow-lg"
+            >
+              Get Started
+            </Link>
 
-          <div className='grid grid-cols-3 gap-5'>
-            <div className='bg-indigo-600 rounded-lg border border-indigo-700 w-56 justify-center hover:shadow-xl items-center flex flex-col h-56 transition-all duration-300'>
-              <h1 className='text-indigo-50 text-xl font-medium'>Customer satisfaction</h1>
-              <p className='text-white text-3xl font-bold'>70%</p>
-            </div>
-            <div className='bg-blue-600 rounded-lg border border-blue-700 w-56 justify-center hover:shadow-xl items-center flex flex-col h-56 transition-all duration-300'>
-              <h1 className='text-blue-50 text-xl font-medium'>Management efficiency</h1>
-              <p className='text-white text-3xl font-bold'>60%</p>
-            </div>
-            <div className='bg-violet-600 rounded-lg border border-violet-700 w-56 justify-center hover:shadow-xl items-center flex flex-col h-56 transition-all duration-300'>
-              <h1 className='text-violet-50 text-xl font-medium'>Workload decrease</h1>
-              <p className='text-white text-3xl font-bold'>50%</p>
-            </div>
-          </div>
-
-          <hr className='border-t border-indigo-200 mt-10 mb-10' />
-          
-          <div className="max-w-2xl mt-24 mx-auto text-left mb-12">
-            <h2 className="text-3xl font-bold text-indigo-700 mb-6">Frequently Asked Questions</h2>
-            {[
-              { question: "What is this platform about?", answer: "Our platform provides AI-driven inventory management and CRM solutions designed to streamline business operations and enhance productivity." },
-              { question: "Is there a free trial available?", answer: "Yes! We offer a 14-day free trial with full access to all features." },
-              { question: "Can I integrate this with other tools?", answer: "Absolutely! Our platform supports integration with various third-party tools, including ERP systems and payment gateways." }
-            ].map((faq, index) => (
-              <div key={index} className="mb-4 border-b border-indigo-100 pb-4">
-                <button className="flex items-center justify-between w-full text-lg font-semibold text-indigo-700 hover:text-indigo-900 transition-colors" onClick={() => toggleFAQ(index)}>
-                  {faq.question}
-                  {openFAQ === index ? <FaMinus className="text-indigo-500" /> : <FaPlus className="text-indigo-500" />}
-                </button>
-                {openFAQ === index && <p className="text-gray-600 mt-2">{faq.answer}</p>}
-              </div>
-            ))}
+            <Link
+              to="/LoginPage"
+              className="px-8 py-3 border border-white rounded-lg hover:bg-white hover:text-indigo-600 transition duration-300"
+            >
+              Login
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      <Footer/>
+      {/* ================= FEATURES ================= */}
+      <section id="features" className="py-28 bg-white">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+
+          <h2 className="text-4xl font-bold mb-16">
+            Powerful Features Built for Efficiency
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-12">
+
+            <div className="p-8 border rounded-xl hover:shadow-lg transition duration-300">
+              <h3 className="text-xl font-semibold mb-4">
+                Inventory Control
+              </h3>
+              <p className="text-gray-600">
+                Add products, manage categories, and monitor stock levels in real time.
+              </p>
+            </div>
+
+            <div className="p-8 border rounded-xl hover:shadow-lg transition duration-300">
+              <h3 className="text-xl font-semibold mb-4">
+                Sales & Purchases
+              </h3>
+              <p className="text-gray-600">
+                Record transactions, manage suppliers, and generate invoices seamlessly.
+              </p>
+            </div>
+
+            <div className="p-8 border rounded-xl hover:shadow-lg transition duration-300">
+              <h3 className="text-xl font-semibold mb-4">
+                Reports & Analytics
+              </h3>
+              <p className="text-gray-600">
+                Gain insights into stock movement, revenue, and overall performance.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ================= HOW IT WORKS ================= */}
+      <section id="how-it-works" className="py-28 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+
+          <h2 className="text-4xl font-bold mb-16">
+            How It Works
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-10">
+
+            <div>
+              <div className="text-indigo-600 text-3xl font-bold mb-4">1</div>
+              <h3 className="font-semibold mb-2">Create Your Account</h3>
+              <p className="text-gray-600">
+                Register your business and configure your settings.
+              </p>
+            </div>
+
+            <div>
+              <div className="text-indigo-600 text-3xl font-bold mb-4">2</div>
+              <h3 className="font-semibold mb-2">Manage Inventory</h3>
+              <p className="text-gray-600">
+                Add products, update stock, and control categories easily.
+              </p>
+            </div>
+
+            <div>
+              <div className="text-indigo-600 text-3xl font-bold mb-4">3</div>
+              <h3 className="font-semibold mb-2">Track & Optimize</h3>
+              <p className="text-gray-600">
+                Analyze reports and improve your business decisions.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <Footer />
     </div>
   );
 }

@@ -7,7 +7,6 @@ const cookieParser = require("cookie-parser");
 const authrouter = require('./Routers/authRouther');
 const productrouter = require('./Routers/ProductRouter');
 const categoryrouter = require("./Routers/categoryRouter")
-const notificationrouter = require("./Routers/notificationRouters");
 const salesrouter = require('./Routers/salesRouter');
 const supplierrouter = require('./Routers/supplierrouter');
 const stockLogRouter = require('./Routers/stockLogRouter');
@@ -59,7 +58,6 @@ const { seedDefaults } = require("./controller/settingcontroller");
 app.use('/api/auth', authrouter);
 app.use('/api/product', productrouter);
 app.use('/api/category', categoryrouter);
-app.use('/api/notification', notificationrouter);
 app.use('/api/sales', salesrouter);
 app.use('/api/supplier', supplierrouter);
 app.use("/api/stock", stockLogRouter);

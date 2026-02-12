@@ -155,36 +155,14 @@ module.exports.getSupplierReport = async (req, res) => {
     }
 };
 
+// Activity Report DISABLED - ActivityLog model removed
 module.exports.getActivityReport = async (req, res) => {
     try {
-        const logs = await ActivityLog.find().populate('userId', 'name role').sort({ createdAt: -1 }).limit(100);
-        const doc = new PDFDocument({ margin: 50 });
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename=Activity_Logs.pdf');
-        doc.pipe(res);
-
-        generateHeader(doc, "System Activity Logs (Last 100)");
-
-        let y = 140;
-        doc.fontSize(9).font('Helvetica-Bold');
-        doc.text("Date/Time", 50, y);
-        doc.text("User", 150, y);
-        doc.text("Action", 250, y);
-        doc.text("Description", 350, y);
-
-        y += 20;
-        doc.font('Helvetica').fontSize(8);
-
-        logs.forEach(l => {
-            doc.text(new Date(l.createdAt).toLocaleString(), 50, y);
-            doc.text(l.userId?.name || "System", 150, y);
-            doc.text(l.action, 250, y);
-            doc.text(l.description, 350, y, { width: 200 });
-            y += 25;
-            if (y > 700) { doc.addPage(); y = 50; }
+        // Activity logging has been disabled
+        res.status(200).json({
+            message: "Activity logging feature has been disabled",
+            logs: []
         });
-
-        doc.end();
     } catch (error) {
         res.status(500).json({ message: "Error generating activity report" });
     }

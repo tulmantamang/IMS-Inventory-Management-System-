@@ -30,7 +30,6 @@ function TopNavbar() {
     if (path.includes('/userstatus')) return { title: 'System Users', subtitle: 'Manage permissions and accounts' };
     if (path.includes('/settings')) return { title: 'System Settings', subtitle: 'Configure application preferences' };
     if (path.includes('/profile')) return { title: 'User Profile', subtitle: 'Manage your account details' };
-    if (path.includes('/notifications')) return { title: 'Notifications', subtitle: 'System alerts and updates' };
     if (path.includes('/activity')) return { title: 'Activity Logs', subtitle: 'Track system usage and events' };
 
     return { title: 'Inventory System', subtitle: 'College Project' };

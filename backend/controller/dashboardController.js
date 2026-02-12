@@ -3,7 +3,6 @@ const Supplier = require('../models/Suppliermodel');
 const Category = require('../models/Categorymodel');
 const Sale = require('../models/Salesmodel');
 const StockLog = require('../models/StockLogmodel');
-const ActivityLog = require('../models/ActivityLogmodel');
 
 module.exports.getDashboardStats = async (req, res) => {
     try {
@@ -45,11 +44,8 @@ module.exports.getDashboardStats = async (req, res) => {
             });
         }
 
-        // Recent Activity Logs (Last 10)
-        const recentActivities = await ActivityLog.find()
-            .populate('userId', 'name role')
-            .sort({ createdAt: -1 })
-            .limit(10);
+        // Recent Activity Logs - DISABLED (ActivityLog model removed)
+        const recentActivities = [];
 
         // Inventory Value
         const products = await Product.find({});

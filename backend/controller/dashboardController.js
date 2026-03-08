@@ -81,7 +81,8 @@ module.exports.getDashboardSummary = async (req, res) => {
             reorderPrediction,
             lowCriticalStock,
             inventoryValueData,
-            inventoryValueSevenDaysAgo
+            inventoryValueSevenDaysAgo,
+            topAndLeastSellingProducts
         ] = await Promise.all([
             // 1. Daily Summary (Today's Stock IN and OUT)
             calculateDailyStockInOut(startOfToday),
@@ -111,7 +112,10 @@ module.exports.getDashboardSummary = async (req, res) => {
             calculateInventoryValue(),
 
             // 10. Inventory Value 7 Days Ago (for change percentage)
-            calculateInventoryValueAtDate(sevenDaysAgo)
+            calculateInventoryValueAtDate(sevenDaysAgo),
+
+            // Top and Least Selling Products (Last 7 Days)
+            calculateTopAndLeastSellingProducts(sevenDaysAgo)
         ]);
 
         // Calculate inventory value change percentage
@@ -155,7 +159,11 @@ module.exports.getDashboardSummary = async (req, res) => {
             overstockCount: stockHealth.overstockCount,
             criticalCoverageCount: stockHealth.criticalCoverageCount,
             reorderRequiredCount: reorderPrediction,
-            alerts: alerts
+            alerts: alerts,
+            // New Detail Arrays
+            lowStockDetails: lowCriticalStock.lowStockDetails,
+            mostSellingProducts: topAndLeastSellingProducts.mostSellingProducts,
+            leastSellingProducts: topAndLeastSellingProducts.leastSellingProducts
         });
 
     } catch (error) {
@@ -438,17 +446,28 @@ async function calculateReorderPrediction(thirtyDaysAgo) {
  * - Critical Stock: current_stock ≤ reorderLevel / 2
  */
 async function calculateLowCriticalStock() {
-    const lowStockCount = await Product.countDocuments({
+    const lowStockProducts = await Product.find({
         status: 'Active',
         $expr: { $lte: ["$total_stock", "$reorderLevel"] }
+    }).select('name total_stock reorderLevel').sort({ total_stock: 1 }).lean();
+
+    const lowStockDetails = lowStockProducts.map(product => {
+        let status = "Low";
+        if (product.total_stock <= product.reorderLevel / 2) {
+            status = "Critical";
+        }
+        return {
+            productName: product.name,
+            currentStock: product.total_stock,
+            reorderLevel: product.reorderLevel,
+            status: status
+        };
     });
 
-    const criticalStockCount = await Product.countDocuments({
-        status: 'Active',
-        $expr: { $lte: ["$total_stock", { $divide: ["$reorderLevel", 2] }] }
-    });
+    const criticalStockCount = lowStockDetails.filter(p => p.status === "Critical").length;
+    const lowStockCount = lowStockDetails.length;
 
-    return { lowStockCount, criticalStockCount };
+    return { lowStockCount, criticalStockCount, lowStockDetails };
 }
 
 /**
@@ -514,6 +533,44 @@ async function calculateInventoryValueAtDate(date) {
     });
 
     return totalValue;
+}
+
+/**
+ * Top & Least Selling Products (Last 7 Days)
+ */
+async function calculateTopAndLeastSellingProducts(sevenDaysAgo) {
+    const mostSellingProducts = await Sale.aggregate([
+        { $match: { saleDate: { $gte: sevenDaysAgo } } },
+        { $unwind: "$products" },
+        {
+            $group: {
+                _id: "$products.product",
+                productName: { $first: "$products.name" },
+                totalSold: { $sum: "$products.quantity" }
+            }
+        },
+        { $sort: { totalSold: -1 } },
+        { $limit: 5 }
+    ]);
+
+    const leastSellingProducts = await Sale.aggregate([
+        { $match: { saleDate: { $gte: sevenDaysAgo } } },
+        { $unwind: "$products" },
+        {
+            $group: {
+                _id: "$products.product",
+                productName: { $first: "$products.name" },
+                totalSold: { $sum: "$products.quantity" }
+            }
+        },
+        { $sort: { totalSold: 1 } },
+        { $limit: 5 }
+    ]);
+
+    return {
+        mostSellingProducts,
+        leastSellingProducts
+    };
 }
 
 /**

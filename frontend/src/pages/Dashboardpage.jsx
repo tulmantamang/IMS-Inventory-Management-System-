@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import axiosInstance from "../lib/axios";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchSettings } from "../features/settingsSlice";
-import { AlertTriangle, Wallet, Package, Clock, TrendingUp, Users, ArrowUpRight, ArrowDownRight, Activity, ShieldCheck, Zap, ChevronRight } from "lucide-react";
+import { AlertTriangle, Wallet, Package, Clock, TrendingUp, TrendingDown, Users, ArrowUpRight, ArrowDownRight, Activity, ShieldCheck, Zap, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Bar } from "react-chartjs-2";
 import {
@@ -62,8 +62,12 @@ function Dashboardpage() {
     overstockCount: 0,
     criticalCoverageCount: 0,
     reorderRequiredCount: 0,
-    alerts: []
+    alerts: [],
+    lowStockDetails: [],
+    mostSellingProducts: [],
+    leastSellingProducts: []
   });
+  const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const { data: settings } = useSelector((state) => state.settings);
   const dispatch = useDispatch();
@@ -139,11 +143,12 @@ function Dashboardpage() {
     }
   };
 
-  const StatsCard = ({ title, value, icon: Icon, colorClass, trend, trendValue }) => (
+  const StatsCard = ({ title, value, icon: Icon, colorClass, trend, trendValue, onClick }) => (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4 hover:shadow-md transition-all duration-300"
+      onClick={onClick}
+      className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4 hover:shadow-md transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-amber-200 hover:bg-amber-50/10' : ''}`}
     >
       <div className={`p-4 rounded-2xl ${colorClass} bg-opacity-10`}>
         <Icon className={`w-6 h-6 ${colorClass.split(' ')[1]}`} />
@@ -306,6 +311,7 @@ function Dashboardpage() {
           value={stats.lowStockCount}
           icon={AlertTriangle}
           colorClass="bg-amber-500 text-amber-600"
+          onClick={() => setIsLowStockModalOpen(true)}
         />
         <StatsCard
           title="Stock Categories"
@@ -377,6 +383,79 @@ function Dashboardpage() {
 
       </div>
 
+      {/* Top & Least Selling Products Grid */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Most Selling */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-gray-800 tracking-tight flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-500" /> 
+              Most Selling (Last 7 Days)
+            </h3>
+          </div>
+          <div className="flex-1 overflow-x-auto">
+             <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-50">
+                      <th className="py-3 px-2 text-[10px] font-black uppercase text-gray-400 tracking-wider">Product Name</th>
+                      <th className="py-3 px-2 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Units Sold</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {stats.mostSellingProducts?.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-emerald-50/30 transition-colors">
+                        <td className="py-3 px-2 text-sm font-bold text-gray-800">{item.productName}</td>
+                        <td className="py-3 px-2 text-sm font-black text-emerald-600 text-right flex items-center justify-end gap-1">
+                          {item.totalSold} <ArrowUpRight className="w-3 h-3 text-emerald-400" />
+                        </td>
+                      </tr>
+                    ))}
+                    {(!stats.mostSellingProducts || stats.mostSellingProducts.length === 0) && (
+                      <tr>
+                        <td colSpan="2" className="py-6 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">No Sales Found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+          </div>
+        </div>
+
+        {/* Least Selling */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-gray-800 tracking-tight flex items-center gap-2">
+              <TrendingDown className="w-5 h-5 text-red-500" /> 
+              Least Selling (Last 7 Days)
+            </h3>
+          </div>
+          <div className="flex-1 overflow-x-auto">
+             <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-50">
+                      <th className="py-3 px-2 text-[10px] font-black uppercase text-gray-400 tracking-wider">Product Name</th>
+                      <th className="py-3 px-2 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Units Sold</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {stats.leastSellingProducts?.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-red-50/30 transition-colors">
+                        <td className="py-3 px-2 text-sm font-bold text-gray-800">{item.productName}</td>
+                        <td className="py-3 px-2 text-sm font-black text-red-600 text-right flex items-center justify-end gap-1">
+                          {item.totalSold} <ArrowDownRight className="w-3 h-3 text-red-400" />
+                        </td>
+                      </tr>
+                    ))}
+                    {(!stats.leastSellingProducts || stats.leastSellingProducts.length === 0) && (
+                      <tr>
+                        <td colSpan="2" className="py-6 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">No Sales Found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+          </div>
+        </div>
+      </section>
+
       {/* Stock Health & Detection Grid */}
       <section className="mb-8">
         <h3 className="text-sm font-black text-gray-800 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
@@ -390,6 +469,66 @@ function Dashboardpage() {
           <HealthBadge count={stats.reorderRequiredCount} label="Reorder Needed" type="info" />
         </div>
       </section>
+
+      {/* Low Stock Modal */}
+      {isLowStockModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsLowStockModalOpen(false);
+          }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-xl max-h-[85vh] flex flex-col"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-gray-800 flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6 text-amber-500" />
+                Low Stock Details
+              </h3>
+              <button onClick={() => setIsLowStockModalOpen(false)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-colors flex items-center justify-center w-8 h-8">
+                ✕
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {stats.lowStockDetails?.length > 0 ? (
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-white shadow-sm z-10">
+                    <tr>
+                      <th className="py-3 px-4 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-wider">Product Name</th>
+                      <th className="py-3 px-4 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Current Stock</th>
+                      <th className="py-3 px-4 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Reorder Level</th>
+                      <th className="py-3 px-4 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {stats.lowStockDetails.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-4 text-sm font-bold text-gray-800">{item.productName}</td>
+                        <td className="py-3 px-4 text-sm font-black text-gray-600 text-right">{item.currentStock}</td>
+                        <td className="py-3 px-4 text-sm font-bold text-gray-400 text-right">{item.reorderLevel}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full ${
+                            item.status === 'Critical' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-center py-10 opacity-50">
+                  <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No Low Stock Items</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

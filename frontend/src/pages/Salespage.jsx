@@ -486,7 +486,7 @@ function Salespage() {
                     <div>
                       <label className="block text-xs font-black uppercase text-gray-400 mb-2 tracking-widest">Payment Type</label>
                       <div className="flex gap-2">
-                        {["Cash", "Credit", "Online"].map(type => (
+                        {["Cash", "Credit", ].map(type => (
                           <button
                             key={type}
                             type="button"

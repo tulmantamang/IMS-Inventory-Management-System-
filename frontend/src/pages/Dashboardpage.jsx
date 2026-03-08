@@ -201,9 +201,6 @@ function Dashboardpage() {
             <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mb-1">Monthly Profit</p>
             <div className="flex items-baseline gap-2">
               <h2 className="text-3xl font-black text-white">{settings?.currency_symbol || 'Rs.'} {stats.monthlyProfit.toLocaleString()}</h2>
-              <span className={`text-xs font-bold ${stats.salesGrowthPercent >= 0 ? 'text-blue-200' : 'text-red-200'}`}>
-                {stats.salesGrowthPercent >= 0 ? '+' : ''}{stats.salesGrowthPercent}%
-              </span>
             </div>
           </div>
           <div className="mt-4 flex items-center text-[10px] font-black text-blue-100 bg-white/10 w-fit px-3 py-1 rounded-full uppercase tracking-widest">
@@ -218,9 +215,6 @@ function Dashboardpage() {
             <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-widest mb-1">Total Assets Value</p>
             <div className="flex items-baseline gap-2">
               <h2 className="text-3xl font-black text-white">{settings?.currency_symbol || 'Rs.'} {stats.inventoryValue.toLocaleString()}</h2>
-              <span className={`text-xs font-bold ${stats.inventoryValueChangePercent >= 0 ? 'text-emerald-200' : 'text-red-200'}`}>
-                {stats.inventoryValueChangePercent >= 0 ? '↑' : '↓'} {Math.abs(stats.inventoryValueChangePercent)}%
-              </span>
             </div>
           </div>
           <div className="mt-4 flex items-center text-[10px] font-black text-emerald-100 bg-white/10 w-fit px-3 py-1 rounded-full uppercase tracking-widest">

@@ -206,19 +206,6 @@ function Supplierpage() {
                 <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Person to contact for orders</p>
               </div>
 
-              {!selectedSupplier && (
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-1">Supplier Code</label>
-                  <input
-                    value="Auto-generated (e.g. SUP-0001)"
-                    type="text"
-                    className="input-field bg-gray-50 font-mono text-gray-500 italic"
-                    readOnly
-                  />
-                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Unique code is assigned on save</p>
-                </div>
-              )}
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-1">Primary Phone *</label>

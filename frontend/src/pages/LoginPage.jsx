@@ -84,6 +84,13 @@ function LoginPage() {
             >
               Authenticate
             </button>
+
+            <Link
+              to="/SignupPage"
+              className="block w-full text-center border-2 border-primary text-primary font-black py-4 rounded-2xl hover:bg-primary hover:text-white transition duration-300"
+            >
+              Register Account
+            </Link>
           </form>
 
           <div className="text-center mt-8 text-sm">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { gettingallSales } from "../features/salesSlice";
 import { gettingallproducts } from "../features/productSlice";
@@ -7,26 +7,14 @@ import { getAllUsers } from "../features/authSlice"; // Removed staffUser, admin
 import SalesChart from "../lib/Salesgraph";
 import Gettopproduct from "../lib/Gettopproduct";
 import FormattedTime from "../lib/FormattedTime";
-import { Users, Wallet, ShoppingCart, TrendingUp, FileText, Download, Package, ShieldAlert, Truck } from "lucide-react";
-import toast from "react-hot-toast";
+
 
 function ReportsPage() {
   const dispatch = useDispatch();
   const { getallsales } = useSelector((state) => state.sales);
-  const { getallproduct } = useSelector((state) => state.product);
   const { allUsers } = useSelector((state) => state.auth);
   const { data: settings } = useSelector((state) => state.settings);
 
-  const [totalSalesAmount, setTotalSalesAmount] = useState(0);
-  const [totalSalesCount, setTotalSalesCount] = useState(0);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [lowStockProducts, setLowStockProducts] = useState([]);
-
-  // Report Dates
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-
-  const backendUrl = "http://localhost:3003";
 
   useEffect(() => {
     dispatch(gettingallSales());

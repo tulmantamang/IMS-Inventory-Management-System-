@@ -428,7 +428,7 @@ function Salespage() {
                             required
                           >
                             <option value="">Choose Listing...</option>
-                            {getallproduct?.filter(p => p.status === 'Active').map(p => (
+                            {getallproduct?.filter(p => p.status === 'Active' && p.category?.status === 'Active').map(p => (
                               <option key={p._id} value={p._id} disabled={p.total_stock <= 0}>
                                 {p.name} ({p.total_stock} in stock)
                               </option>
@@ -615,12 +615,12 @@ function Salespage() {
                       {selectedSale.products?.map((item, idx) => (
                         <div key={idx} className="p-4 flex justify-between items-center border-b border-gray-200 last:border-0">
                           <div>
-                            <p className="font-bold text-gray-800">{item.name}</p>
-                            <p className="text-xs text-gray-400 font-mono tracking-tighter">Price: {settings?.currency_symbol || 'Rs.'}{item.price.toLocaleString()}</p>
+                            <p className="font-bold text-gray-800">{item.name || item.product?.name || "[Deleted Product]"}</p>
+                            <p className="text-xs text-gray-400 font-mono tracking-tighter">Price: {settings?.currency_symbol || 'Rs.'}{(item.price || 0).toLocaleString()}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-black text-gray-700">x {item.quantity}</p>
-                            <p className="text-xs font-bold text-primary">{settings?.currency_symbol || 'Rs.'} {(item.quantity * item.price).toLocaleString()}</p>
+                            <p className="text-xs font-bold text-primary">{settings?.currency_symbol || 'Rs.'} {((item.quantity || 0) * (item.price || 0)).toLocaleString()}</p>
                           </div>
                         </div>
                       ))}

@@ -70,7 +70,7 @@ app.use('/api/settings', settingRouter);
 // Removed unused routes: inventory, activity, order
 
 server.listen(PORT, async () => {
-  MongoDBconfig();
+  await MongoDBconfig();
   await seedDefaults();
   console.log(`The server is running at port ${PORT}`);
 });

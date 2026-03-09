@@ -9,15 +9,12 @@ import {
     Save,
     Truck,
     Package,
-    Plus,
     Trash2,
-    Calendar,
     FileText,
     Eye,
     X,
     ClipboardList,
     TrendingUp,
-    Search,
     BadgePercent
 } from "lucide-react";
 import { fetchSettings } from "../features/settingsSlice";
@@ -597,8 +594,8 @@ function PurchasePage() {
                                         {selectedPurchase.items?.map((item, idx) => (
                                             <div key={idx} className="p-4 flex justify-between items-center border-b border-gray-200 last:border-0">
                                                 <div>
-                                                    <p className="font-bold text-gray-800">{item.product?.name || "Deleted Product"}</p>
-                                                    <p className="text-xs text-gray-400 font-mono tracking-tighter">SKU: {item.product?.sku} | Cost: Rs.{item.costPrice}</p>
+                                                    <p className="font-bold text-gray-800">{item.product?.name || "[Deleted Product]"}</p>
+                                                    <p className="text-xs text-gray-400 font-mono tracking-tighter">SKU: {item.product?.sku || "N/A"} | Cost: Rs.{item.costPrice}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-sm font-black text-gray-700">x {item.quantity}</p>

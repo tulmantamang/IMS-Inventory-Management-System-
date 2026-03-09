@@ -15,7 +15,7 @@ const generateSKU = async () => {
 module.exports.Addproduct = async (req, res) => {
   const userId = req.user._id;
   try {
-    const { name, description, category, selling_price, reorderLevel, status } = req.body;
+    const { name, description, category, selling_price, reorderLevel, status, image } = req.body;
 
     // Strict Validation
     if (!name || !category || !description || selling_price === undefined) {
@@ -56,11 +56,19 @@ module.exports.Addproduct = async (req, res) => {
       skuExists = await Product.findOne({ sku });
     }
 
+    // Handle Image Upload Action
+    let imageUrl = "";
+    if (image) {
+      // Direct Base64 Storage due to disabled Cloudinary Account
+      imageUrl = image;
+    }
+
     const createdProduct = new Product({
       name,
       sku,
       description,
       category,
+      image: imageUrl,
       current_cost_price: 0, // Initialized to 0, only updated via Purchase
       selling_price: Number(selling_price),
       total_stock: 0,
@@ -102,13 +110,27 @@ module.exports.RemoveProduct = async (req, res) => {
   try {
     const { productId } = req.params;
     const userId = req.user._id;
+    
+    // Import all transactional models
     const StockLog = require("../models/StockLogmodel");
+    const Sale = require("../models/Salesmodel");
+    const Purchase = require("../models/Purchasemodel");
+    const Adjustment = require("../models/Adjustmentmodel");
 
-    // Check if any transactions exist for this product
-    const transactionCount = await StockLog.countDocuments({ product: productId });
-    if (transactionCount > 0) {
+    // Check system-wide dependencies natively with Promise.all
+    const [stockLogsCount, salesCount, purchasesCount, adjustmentsCount] = await Promise.all([
+      StockLog.countDocuments({ product: productId }),
+      Sale.countDocuments({ "products.product": productId }),
+      Purchase.countDocuments({ "items.product": productId }),
+      Adjustment.countDocuments({ product: productId })
+    ]);
+
+    const totalDependencies = stockLogsCount + salesCount + purchasesCount + adjustmentsCount;
+
+    // Reject Deletion Rule
+    if (totalDependencies > 0) {
       return res.status(400).json({
-        message: `Cannot delete product: It has ${transactionCount} recorded transactions. Set status to 'Inactive' instead.`
+        message: "This product cannot be deleted because it is linked to system transactions."
       });
     }
 
@@ -168,6 +190,15 @@ module.exports.EditProduct = async (req, res) => {
     delete updatedData.sku;
     delete updatedData.total_stock;
     delete updatedData.current_cost_price;
+
+    // Handle Image Upload Action
+    if (updatedData.image) {
+       // Direct Base64 Storage due to disabled Cloudinary Account
+       // Leaves updatedData.image as the base64 string inherently.
+    } else {
+      // Prevent deleting the old image if no new image is provided
+      delete updatedData.image;
+    }
 
     const updatedProduct = await Product.findByIdAndUpdate(productId, updatedData, { new: true });
 

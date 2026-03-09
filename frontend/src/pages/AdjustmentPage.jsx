@@ -4,15 +4,8 @@ import { gettingallproducts } from "../features/productSlice";
 import { createAdjustment, getAllAdjustments } from "../features/adjustmentSlice";
 import toast from "react-hot-toast";
 import {
-    History,
-    Edit3,
-    Search,
     AlertCircle,
-    Calendar,
-    User,
-    Package,
-    ArrowRightCircle,
-    CheckCircle2
+    Package
 } from "lucide-react";
 import FormattedTime from "../lib/FormattedTime";
 
@@ -37,7 +30,7 @@ function AdjustmentPage() {
     const dispatch = useDispatch();
     const { Authuser } = useSelector((state) => state.auth);
     const { getallproduct } = useSelector((state) => state.product);
-    const { adjustments, loading } = useSelector((state) => state.adjustment);
+    const { adjustments } = useSelector((state) => state.adjustment);
 
     // Authorization: Only ADMIN
     const isAdmin = Authuser?.role === 'ADMIN';

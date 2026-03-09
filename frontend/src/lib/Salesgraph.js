@@ -18,7 +18,6 @@ ChartJS.register(
 const SalesChart = () => {
   const dispatch = useDispatch();
   const { getallsales } = useSelector((state) => state.sales);
-  const [messages, setMessages] = useState([]);
   const [chartData, setChartData] = useState({
     labels: [],
     datasets: [],
@@ -37,16 +36,6 @@ const SalesChart = () => {
       const totalSales = getallsales.map((sale) => sale.totalAmount);
       const paymentStatuses = getallsales.map((sale) => (sale.paymentStatus === "Paid" ? 1 : 0));
 
-      // Prepare customer messages for display
-      const customerMessages = getallsales.map((sale) => ({
-        customerName: sale.customerName,
-        paymentMethod: sale.paymentMethod,
-        paymentStatus: sale.paymentStatus,
-        status: sale.status,
-        totalAmount: sale.totalAmount,
-      }));
-
-      setMessages(customerMessages);
 
       // Update chart data
       setChartData({

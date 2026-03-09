@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-    Settings as SettingsIcon,
     Save,
     Building2,
     BadgePercent,

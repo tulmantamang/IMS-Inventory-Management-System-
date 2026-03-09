@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { IoMdAdd } from "react-icons/io";
-import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
+import { MdKeyboardDoubleArrowLeft, MdImage } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Addproduct,
@@ -33,6 +33,7 @@ function Productpage() {
   const [description, setDescription] = useState("");
   const [reorderLevel, setReorderLevel] = useState("0");
   const [status, setStatus] = useState("Active");
+  const [image, setImage] = useState("");
 
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -76,7 +77,8 @@ function Productpage() {
       selling_price: Number(selling_price),
       description,
       reorderLevel: Number(reorderLevel),
-      status
+      status,
+      image
     };
 
     dispatch(EditProduct({ id: selectedProduct._id, updatedData }))
@@ -109,7 +111,8 @@ function Productpage() {
       category,
       selling_price: Number(selling_price),
       reorderLevel: Number(reorderLevel),
-      status
+      status,
+      image
     };
 
     dispatch(Addproduct(productData))
@@ -133,6 +136,7 @@ function Productpage() {
     setDescription("");
     setReorderLevel("0");
     setStatus("Active");
+    setImage("");
   };
 
   const handleEditClick = (product) => {
@@ -144,6 +148,7 @@ function Productpage() {
     setDescription(product.description || "");
     setReorderLevel(product.reorderLevel || "0");
     setStatus(product.status || "Active");
+    setImage(""); 
     setIsFormVisible(true);
   };
 
@@ -162,6 +167,17 @@ function Productpage() {
   };
 
   const displayProducts = (query.trim() !== "" ? searchdata : getallproduct);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   return (
     <div className="bg-neutral-50 min-h-screen text-gray-900 font-sans">
@@ -265,6 +281,17 @@ function Productpage() {
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="input-field h-32" required />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
+                <input 
+                  type="file" 
+                  accept="image/png, image/jpeg, image/jpg" 
+                  onChange={handleImageUpload} 
+                  className="input-field cursor-pointer p-2 bg-white" 
+                />
+                <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Max size 5MB (JPG, PNG)</p>
+              </div>
+
               <button type="submit" className="w-full btn-primary py-3 rounded-lg font-bold shadow-lg transform transition hover:-translate-y-1">
                 {selectedProduct ? "Update Product" : "Create Product"}
               </button>
@@ -279,11 +306,12 @@ function Productpage() {
             <table className="min-w-full text-left">
               <thead className="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
                 <tr>
+                  <th className="px-6 py-4 w-16 text-center">Image</th>
                   <th className="px-6 py-4">Product / SKU</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4 text-center">Total Stock</th>
                   <th className="px-6 py-4 text-center">Status</th>
-                  <th className="px-6 py-4 text-right">Avg Cost</th>
+                  <th className="px-6 py-4 text-right">Purchase Price</th>
                   <th className="px-6 py-4 text-right">Selling Price</th>
                   <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
@@ -296,6 +324,17 @@ function Productpage() {
                       className="hover:bg-blue-50 transition cursor-pointer"
                       onClick={() => handleRowClick(product)}
                     >
+                      <td className="px-6 py-4 text-center h-full">
+                        <div className="flex items-center justify-center">
+                          {product.image ? (
+                            <img src={product.image} alt="thumbnail" className="w-10 h-10 rounded-md shadow-sm object-cover border border-gray-200" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-md shadow-sm border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-300">
+                              <MdImage className="text-xl" />
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-900">{product.name}</div>
                         <div className="text-xs text-primary font-mono">{product.sku}</div>

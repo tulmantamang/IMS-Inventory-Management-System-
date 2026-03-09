@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { User, Mail, Lock, Camera, Save, ArrowLeft } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { User, Mail, Lock, Camera, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../lib/axios';
 import toast from 'react-hot-toast';
 import { checkAuth } from '../features/authSlice'; // Import checkAuth to update redux state
 
 const ProfilePage = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const [user, setUser] = useState({
     full_name: '',

@@ -11,7 +11,7 @@ function TopNavbar() {
 
   const getPageTitle = () => {
     const path = location.pathname.toLowerCase();
-    const role = Authuser?.role?.trim().toUpperCase();
+
 
     if (path.includes('/admindashboard') && (path.endsWith('/admindashboard') || path.endsWith('/admindashboard/'))) {
       return { title: 'Admin Dashboard', subtitle: 'System health and real-time inventory metrics' };

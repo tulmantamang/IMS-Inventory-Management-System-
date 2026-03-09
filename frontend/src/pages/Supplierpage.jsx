@@ -6,7 +6,6 @@ import { Package as PackageIcon } from "lucide-react";
 import {
   CreateSupplier,
   gettingallSupplier,
-  deleteSupplier,
   EditSupplier,
 } from "../features/SupplierSlice";
 import { gettingallproducts } from "../features/productSlice";

@@ -19,6 +19,16 @@ module.exports.createSupplier = async (req, res) => {
       return res.status(400).json({ success: false, message: `Please fill in: ${missing.join(", ")}` });
     }
 
+    // Format: Phone must be exactly 10 digits
+    if (!/^[0-9]{10}$/.test(phone.toString().trim())) {
+      return res.status(400).json({ success: false, message: "Primary phone number must be a valid 10-digit number." });
+    }
+
+    // Format: PAN/VAT must be exactly 9 digits
+    if (!/^[0-9]{9}$/.test(pan_vat.toString().trim())) {
+      return res.status(400).json({ success: false, message: "PAN/VAT number must be a unique 9-digit number." });
+    }
+
     // Uniqueness: PAN/VAT
     const cleanPan = pan_vat.toString().trim();
     const existingPan = await Supplier.findOne({ pan_vat: cleanPan });
@@ -129,6 +139,16 @@ module.exports.editSupplier = async (req, res) => {
     const supplier = await Supplier.findById(supplierId);
     if (!supplier) {
       return res.status(404).json({ message: "Supplier not found" });
+    }
+
+    // Format: Phone must be exactly 10 digits (if provided)
+    if (phone && !/^[0-9]{10}$/.test(phone.toString().trim())) {
+      return res.status(400).json({ success: false, message: "Primary phone number must be a valid 10-digit number." });
+    }
+
+    // Format: PAN/VAT must be exactly 9 digits (if provided)
+    if (pan_vat && !/^[0-9]{9}$/.test(pan_vat.toString().trim())) {
+      return res.status(400).json({ success: false, message: "PAN/VAT number must be a unique 9-digit number." });
     }
 
     // Check unique PAN/VAT if changed

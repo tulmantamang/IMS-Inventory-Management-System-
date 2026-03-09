@@ -131,10 +131,10 @@ module.exports.generatePurchaseInvoice = async (req, res) => {
 
         console.log("Purchase data retrieved. Starting PDF generation...");
 
-        const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margins: { top: 50, left: 50, right: 50, bottom: 30 } });
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=purchase-invoice-${purchase.invoiceNumber || id}.pdf`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=purchase-invoice-${purchase.invoiceNumber || id}.pdf`);
 
         doc.pipe(res);
 
@@ -145,103 +145,139 @@ module.exports.generatePurchaseInvoice = async (req, res) => {
             return acc;
         }, {});
 
-        // Header (Centered)
-        doc.fillColor("#444444")
-            .fontSize(20)
-            .text(settings.company_name || "Advanced Inventory Management System", 50, 50, { align: "center", width: 500 })
-            .fontSize(10)
-            .text(settings.company_address || "Purchase Records", 50, 75, { align: "center", width: 500 })
-            .text(`Phone: ${settings.company_phone || "N/A"} | Email: ${settings.company_email || "N/A"}`, 50, 90, { align: "center", width: 500 })
-            .moveDown();
+        // ── Header Banner ────────────────────────────────────────────────────────
+        doc.rect(0, 0, 612, 90).fill("#1E293B");
 
-        doc.strokeColor("#aaaaaa")
-            .lineWidth(1)
-            .moveTo(50, 115)
-            .lineTo(550, 115)
-            .stroke();
+        if (settings.company_logo) {
+            try {
+                const base64Data = settings.company_logo.split(';base64,').pop();
+                const logoBuffer = Buffer.from(base64Data, 'base64');
+                doc.image(logoBuffer, 50, 18, { width: 45 });
+            } catch (err) { console.error("Logo render error", err); }
+        }
 
-        doc.moveDown();
+        doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(18)
+            .text(settings.company_name || "INVENTORY SYSTEM", 50, 18, { align: "center", width: 512 });
+        doc.fillColor("#94A3B8").font("Helvetica").fontSize(9)
+            .text(`${settings.company_address || "Nepal"}   |   Phone: ${settings.company_phone || "N/A"}   |   ${settings.company_email || ""}`, 50, 42, { align: "center", width: 512 });
 
-        // Invoice Info
-        doc.fontSize(16).text("PURCHASE ORDER", { align: "right" });
-        doc.fontSize(10).text(`Invoice Number: ${String(purchase.invoiceNumber || "N/A").toUpperCase()}`, { align: "right" });
-        doc.text(`Date: ${new Date(purchase.purchaseDate).toLocaleDateString()}`, { align: "right" });
-        doc.text(`Payment Method: ${String(purchase.paymentType || "Cash").toUpperCase()}`, { align: "right" });
+        // ── Two-column meta section ───────────────────────────────────────────────
+        const metaY = 108;
 
-        doc.moveDown();
-        doc.fontSize(12).text(`Vendor: ${String(purchase.supplier?.name || "N/A")}`, { align: "left" });
-        doc.fontSize(10).text(`PAN/VAT: ${String(purchase.supplier?.pan_vat || "N/A")}`, { align: "left" });
-        doc.text(`Email: ${String(purchase.supplier?.email || "N/A")}`, { align: "left" });
-        doc.moveDown();
+        // Left: Vendor Info
+        doc.fillColor("#64748B").font("Helvetica-Bold").fontSize(7)
+            .text("VENDOR", 50, metaY);
+        doc.fillColor("#1E293B").font("Helvetica-Bold").fontSize(11)
+            .text(String(purchase.supplier?.name || "N/A"), 50, metaY + 12);
+        
+        doc.font("Helvetica").fontSize(8.5).fillColor("#374151");
+        if (purchase.supplier?.pan_vat) doc.text(`PAN/VAT: ${purchase.supplier.pan_vat}`, 50, metaY + 26);
+        if (purchase.supplier?.email)   doc.text(purchase.supplier.email, 50, metaY + 40);
 
-        // Table Header
-        const tableTop = 260;
-        doc.font("Helvetica-Bold");
-        doc.text("Product", 50, tableTop);
-        doc.text("Quantity", 300, tableTop, { width: 90, align: "right" });
-        doc.text("Unit Cost", 400, tableTop, { width: 90, align: "right" });
-        doc.text("Total", 500, tableTop, { width: 50, align: "right" });
+        // Right: Invoice details
+        doc.fillColor("#1E293B").font("Helvetica-Bold").fontSize(16)
+            .text("PURCHASE ORDER", 250, metaY, { width: 300, align: "right" });
 
-        doc.strokeColor("#aaaaaa")
-            .lineWidth(1)
-            .moveTo(50, tableTop + 15)
-            .lineTo(550, tableTop + 15)
-            .stroke();
+        const infoRight = 555;
+        const infoLabelW = 120;
+        let iy = metaY + 26;
+        const infoRows = [
+            ["Order No:", String(purchase.invoiceNumber || "N/A").toUpperCase()],
+            ["Date:", new Date(purchase.purchaseDate).toLocaleDateString()],
+            ["Payment:", String(purchase.paymentType || "Cash").toUpperCase()]
+        ];
+        doc.font("Helvetica").fontSize(8.5);
+        infoRows.forEach(([label, val]) => {
+            doc.fillColor("#64748B").text(label, infoRight - infoLabelW - 100, iy, { width: 95, align: "right" });
+            doc.fillColor("#1E293B").font("Helvetica-Bold").text(val, infoRight - 100, iy, { width: 100, align: "right" });
+            doc.font("Helvetica");
+            iy += 14;
+        });
+
+        // Separator
+        doc.strokeColor("#E2E8F0").lineWidth(1)
+            .moveTo(50, metaY + 75).lineTo(562, metaY + 75).stroke();
+
+        // ── Table ────────────────────────────────────────────────────────────────
+        const tableTop = metaY + 88;
+        const col = { item: 50, qty: 310, price: 395, total: 485 };
+        const colW = { qty: 75, price: 80, total: 77 };
+
+        // Header background
+        doc.rect(50, tableTop - 5, 512, 20).fill("#1E293B");
+
+        doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(8.5);
+        doc.text("PRODUCT",          col.item,  tableTop, { width: 250 });
+        doc.text("QTY",              col.qty,   tableTop, { width: colW.qty,   align: "right" });
+        doc.text("UNIT COST",        col.price, tableTop, { width: colW.price, align: "right" });
+        doc.text("TOTAL",            col.total, tableTop, { width: colW.total, align: "right" });
 
         // Items
-        let y = tableTop + 30;
-        doc.font("Helvetica");
+        let y = tableTop + 22;
+        doc.font("Helvetica").fontSize(9).fillColor("#1a1a1a");
 
-        purchase.items.forEach(item => {
+        purchase.items.forEach((item, i) => {
             const qty = item.quantity || 0;
             const cost = item.costPrice || 0;
             const itemTotal = qty * cost;
 
-            doc.text(String(item.product?.name || "Deleted Product"), 50, y);
-            doc.text(String(qty), 300, y, { width: 90, align: "right" });
-            doc.text(cost.toFixed(2), 400, y, { width: 90, align: "right" });
-            doc.text(itemTotal.toFixed(2), 500, y, { width: 50, align: "right" });
+            if (i % 2 === 0) doc.rect(50, y - 4, 512, 18).fill("#F8FAFC");
+            doc.fillColor("#1a1a1a");
+
+            doc.text(String(item.product?.name || "Deleted Product"), col.item,  y, { width: 250 });
+            doc.text(String(qty),                                     col.qty,   y, { width: colW.qty,   align: "right" });
+            doc.text(`Rs. ${cost.toFixed(2)}`,                        col.price, y, { width: colW.price, align: "right" });
+            doc.text(`Rs. ${itemTotal.toFixed(2)}`,                   col.total, y, { width: colW.total, align: "right" });
+
+            doc.strokeColor("#E2E8F0").lineWidth(0.5)
+                .moveTo(50, y + 14).lineTo(562, y + 14).stroke();
             y += 20;
         });
 
-        doc.strokeColor("#aaaaaa")
-            .lineWidth(1)
-            .moveTo(50, y)
-            .lineTo(550, y)
-            .stroke();
+        // Divider after items
+        doc.strokeColor("#94A3B8").lineWidth(1)
+            .moveTo(50, y).lineTo(562, y).stroke();
 
-        // Totals Breakdown
-        y += 20;
-        doc.font("Helvetica").fontSize(10);
+        // ── Totals breakdown ────────────────────────────────────────────────────
+        y += 12;
+        const curr = settings.currency_symbol || 'Rs.';
+        const tLabelX = col.price;
+        const tValX   = col.total;
 
-        doc.text("Subtotal:", 400, y, { width: 90, align: "right" });
-        doc.text(Number(purchase.subtotal || purchase.totalAmount).toFixed(2), 500, y, { width: 50, align: "right" });
+        doc.font("Helvetica").fontSize(9).fillColor("#374151");
+        
+        doc.text("Subtotal:", tLabelX, y, { width: colW.price, align: "right" });
+        doc.text(`${curr} ${Number(purchase.subtotal || purchase.totalAmount).toFixed(2)}`, tValX, y, { width: colW.total, align: "right" });
+        y += 16;
 
-        y += 15;
-        doc.text(`Discount (${purchase.discountPercentage || 0}%):`, 400, y, { width: 90, align: "right" });
-        doc.text(`- ${Number(purchase.discountAmount || 0).toFixed(2)}`, 500, y, { width: 50, align: "right" });
+        doc.text(`Discount (${purchase.discountPercentage || 0}%):`, tLabelX, y, { width: colW.price, align: "right" });
+        doc.text(`- ${curr} ${Number(purchase.discountAmount || 0).toFixed(2)}`, tValX, y, { width: colW.total, align: "right" });
+        y += 16;
 
-        y += 15;
-        doc.text(`Tax (${purchase.taxPercentage || 0}%):`, 400, y, { width: 90, align: "right" });
-        doc.text(`+ ${Number(purchase.taxAmount || 0).toFixed(2)}`, 500, y, { width: 50, align: "right" });
+        doc.text(`Tax (${purchase.taxPercentage || 0}%):`, tLabelX, y, { width: colW.price, align: "right" });
+        doc.text(`+ ${curr} ${Number(purchase.taxAmount || 0).toFixed(2)}`, tValX, y, { width: colW.total, align: "right" });
+        y += 18;
 
-        y += 20;
-        doc.font("Helvetica-Bold").fontSize(12);
-        doc.text("Grand Total:", 400, y, { width: 90, align: "right" });
-        doc.text(`${settings.currency_symbol || 'Rs.'} ${Number(purchase.totalAmount || 0).toFixed(2)}`, 500, y, { width: 50, align: "right" });
+        // Grand Total row
+        doc.rect(tLabelX - 10, y - 4, colW.price + colW.total + 20, 22).fill("#1E293B");
+        doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(10);
+        doc.text("GRAND TOTAL:", tLabelX, y, { width: colW.price, align: "right" });
+        doc.text(`${curr} ${Number(purchase.totalAmount || 0).toFixed(2)}`, tValX, y, { width: colW.total, align: "right" });
 
-        // Footer (Generated By)
+        // ── Footer ───────────────────────────────────────────────────────────────
         const User = require('../models/Usermodel');
         const userDoc = await User.findById(req.user._id);
 
-        doc.moveDown(4);
-        doc.fontSize(8).font("Helvetica-Bold")
-            .text(`Purchase Order Generated By: ${userDoc?.full_name || 'System Administrator'}`, { align: "center" })
-            .text(`Date: ${new Date().toLocaleString()}`, { align: "center" });
+        const footerY = 710;
+        doc.strokeColor("#CBD5E1").lineWidth(0.8)
+            .moveTo(50, footerY).lineTo(562, footerY).stroke();
 
-        // Footer
-        doc.fontSize(10)
-            .text("Purchase recorded in the inventory system.", 50, 700, { align: "center", width: 500 });
+        doc.fillColor("#64748B").font("Helvetica").fontSize(8)
+            .text("Purchase recorded in the inventory system.", 50, footerY + 8, { align: "center", width: 512 });
+
+        doc.fillColor("#374151").font("Helvetica-Bold").fontSize(7.5)
+            .text(`Generated By: ${userDoc?.full_name || 'System Administrator'}`, 50, footerY + 22, { align: "left" })
+            .text(`Date printed: ${new Date().toLocaleString()}`,                  50, footerY + 22, { align: "right", width: 512 });
 
         doc.end();
         console.log("PDF generation complete.");

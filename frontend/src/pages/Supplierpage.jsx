@@ -35,6 +35,7 @@ function Supplierpage() {
   const [status, setStatus] = useState("Active");
   const [showHistory, setShowHistory] = useState(false);
   const [supplier_id, setSupplierId] = useState("");
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     dispatch(gettingallSupplier());
@@ -52,11 +53,55 @@ function Supplierpage() {
     setStatus("Active");
     setSupplierId("");
     setSelectedSupplier(null);
+    setFormErrors({});
   };
+
+  // ── Validation ──────────────────────────────────────────────────────────────
+  const validateForm = (excludeSupplierId = null) => {
+    const errors = {};
+
+    // Primary Phone: exactly 10 digits, only numbers, Nepal format
+    const phoneVal = Phone.trim();
+    if (!/^[0-9]{10}$/.test(phoneVal)) {
+      errors.phone = "Primary phone number must be a valid 10-digit number.";
+    }
+
+    // PAN/VAT: exactly 9 digits, only numbers, unique
+    const panVal = pan_vat.trim();
+    if (!/^[0-9]{9}$/.test(panVal)) {
+      errors.pan_vat = "PAN/VAT number must be a unique 9-digit number.";
+    } else {
+      // Uniqueness check against already-loaded suppliers
+      const duplicate = getallSupplier?.find(
+        (s) =>
+          s.pan_vat === panVal &&
+          s._id !== excludeSupplierId
+      );
+      if (duplicate) {
+        errors.pan_vat = "PAN/VAT number must be a unique 9-digit number.";
+      }
+    }
+
+    // Office Address: must not contain digits
+    const addressVal = Address.trim();
+    if (/[0-9]/.test(addressVal)) {
+      errors.address = "Office address must contain letters only, no numbers.";
+    }
+
+    return errors;
+  };
+  // ────────────────────────────────────────────────────────────────────────────
 
   const handleEditSubmit = (event) => {
     event.preventDefault();
     if (!selectedSupplier) return;
+
+    const errors = validateForm(selectedSupplier._id);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
 
     const updatedData = {
       name,
@@ -96,6 +141,14 @@ function Supplierpage() {
 
   const submitSupplier = async (event) => {
     event.preventDefault();
+
+    const errors = validateForm(null);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+
     const supplierInfo = {
       name,
       contact_person,
@@ -210,27 +263,41 @@ function Supplierpage() {
                   <label className="block text-sm font-bold text-gray-800 mb-1">Primary Phone *</label>
                   <input
                     value={Phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => {
+                      setPhone(e.target.value.replace(/\D/g, ''));
+                      if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: undefined }));
+                    }}
                     type="text"
-                    className="input-field"
+                    className={`input-field ${formErrors.phone ? 'border-red-500 focus:ring-red-400' : ''}`}
                     required
                     maxLength={10}
                     placeholder="e.g. 9841XXXXXX"
                   />
-                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">10-digit mobile or landline</p>
+                  {formErrors.phone ? (
+                    <p className="text-[11px] text-red-500 mt-1 font-medium">{formErrors.phone}</p>
+                  ) : (
+                    <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">10-digit mobile or landline</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-1">PAN/VAT Number *</label>
                   <input
                     value={pan_vat}
-                    onChange={(e) => setPanVat(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => {
+                      setPanVat(e.target.value.replace(/\D/g, ''));
+                      if (formErrors.pan_vat) setFormErrors((prev) => ({ ...prev, pan_vat: undefined }));
+                    }}
                     type="text"
-                    className="input-field"
+                    className={`input-field ${formErrors.pan_vat ? 'border-red-500 focus:ring-red-400' : ''}`}
                     required
                     maxLength={9}
                     placeholder="9-Digit Number"
                   />
-                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Tax registration number</p>
+                  {formErrors.pan_vat ? (
+                    <p className="text-[11px] text-red-500 mt-1 font-medium">{formErrors.pan_vat}</p>
+                  ) : (
+                    <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Tax registration number</p>
+                  )}
                 </div>
               </div>
 
@@ -249,12 +316,20 @@ function Supplierpage() {
                 <label className="block text-sm font-bold text-gray-800 mb-1">Office Address *</label>
                 <input
                   value={Address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    if (formErrors.address) setFormErrors((prev) => ({ ...prev, address: undefined }));
+                  }}
                   type="text"
-                  className="input-field"
+                  className={`input-field ${formErrors.address ? 'border-red-500 focus:ring-red-400' : ''}`}
                   required
                   placeholder="e.g. New Road, Kathmandu"
                 />
+                {formErrors.address ? (
+                  <p className="text-[11px] text-red-500 mt-1 font-medium">{formErrors.address}</p>
+                ) : (
+                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">Letters only, no numbers</p>
+                )}
               </div>
 
               {selectedSupplier && (

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 mongoose.connect("mongodb://127.0.0.1:27017/inventorydb")
     .then(async () => {
-        const Purchase = require('./models/Purchasemodel');
+        const Purchase = require('../models/Purchasemodel');
         // create a dummy purchase
         const p = new Purchase({
             supplier: new mongoose.Types.ObjectId(),

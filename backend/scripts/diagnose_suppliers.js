@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
-const Supplier = require('./models/Suppliermodel');
-require('dotenv').config();
+const Supplier = require('../models/Suppliermodel');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 async function checkSuppliers() {
     try {

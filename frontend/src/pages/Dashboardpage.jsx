@@ -65,7 +65,9 @@ function Dashboardpage() {
     alerts: [],
     lowStockDetails: [],
     mostSellingProducts: [],
-    leastSellingProducts: []
+    leastSellingProducts: [],
+    monthlyRevenue: 0,
+    monthlyProfit: 0
   });
   const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -175,7 +177,7 @@ function Dashboardpage() {
     </motion.div>
   );
 
-  const HealthBadge = ({ count, label, type }) => {
+  const HealthBadge = ({ count, label, type, onClick }) => {
     const configs = {
       danger: "bg-red-50 text-red-600 border-red-100",
       warning: "bg-amber-50 text-amber-600 border-amber-100",
@@ -183,7 +185,10 @@ function Dashboardpage() {
       success: "bg-emerald-50 text-emerald-600 border-emerald-100"
     };
     return (
-      <div className={`flex flex-col items-center p-4 rounded-2xl border ${configs[type] || configs.info}`}>
+      <div 
+        onClick={onClick}
+        className={`flex flex-col items-center p-4 rounded-2xl border ${configs[type] || configs.info} ${onClick ? 'cursor-pointer hover:shadow-md transition-all' : ''}`}
+      >
         <span className="text-2xl font-black">{count}</span>
         <span className="text-[9px] font-black uppercase tracking-tighter text-center">{label}</span>
       </div>
@@ -203,28 +208,37 @@ function Dashboardpage() {
         {/* Sales Insight */}
         <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-3xl text-white shadow-lg flex flex-col justify-between h-48">
           <div>
-            <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mb-1">Monthly Profit</p>
+            <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mb-1 font-black">Monthly Net Profit</p>
             <div className="flex items-baseline gap-2">
               <h2 className="text-3xl font-black text-white">{settings?.currency_symbol || 'Rs.'} {stats.monthlyProfit.toLocaleString()}</h2>
             </div>
+            {stats.salesGrowthPercent !== 0 && (
+              <div className={`mt-2 flex items-center text-[10px] font-black w-fit px-2 py-0.5 rounded-lg uppercase tracking-tighter ${stats.salesGrowthPercent >= 0 ? 'bg-emerald-400/20 text-emerald-100' : 'bg-red-400/20 text-red-100'}`}>
+                {stats.salesGrowthPercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                {stats.salesGrowthPercent >= 0 ? '+' : ''}{stats.salesGrowthPercent}% v/s Last Week
+              </div>
+            )}
           </div>
           <div className="mt-4 flex items-center text-[10px] font-black text-blue-100 bg-white/10 w-fit px-3 py-1 rounded-full uppercase tracking-widest">
-            <TrendingUp className="w-3 h-3 mr-1" />
-            Growth Insight
+            <Zap className="w-3 h-3 mr-1" />
+            Performance Signal
           </div>
         </div>
 
         {/* Inventory Value & Health */}
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-6 rounded-3xl text-white shadow-lg flex flex-col justify-between h-48">
           <div>
-            <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-widest mb-1">Total Assets Value</p>
+            <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-widest mb-1 font-black">Total Assets Value</p>
             <div className="flex items-baseline gap-2">
               <h2 className="text-3xl font-black text-white">{settings?.currency_symbol || 'Rs.'} {stats.inventoryValue.toLocaleString()}</h2>
             </div>
+            <p className="text-[10px] font-black text-emerald-100/80 mt-2 uppercase tracking-tight">
+              Computed by Stock × Cost Price
+            </p>
           </div>
           <div className="mt-4 flex items-center text-[10px] font-black text-emerald-100 bg-white/10 w-fit px-3 py-1 rounded-full uppercase tracking-widest">
             <Wallet className="w-3 h-3 mr-1" />
-            Asset health
+            Asset valuation
           </div>
         </div>
 
@@ -249,14 +263,14 @@ function Dashboardpage() {
                 <span className="text-[9px] font-bold text-gray-400 uppercase">Slow</span>
               </div>
             </div>
-            <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-tighter">Classified by 30-day sales velocity</p>
+            <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-tighter">Based on 30-day velocity</p>
           </div>
         </div>
       </section>
 
-      <h3 className="text-sm font-black text-gray-800 uppercase mb-4 flex items-center">
+      <h3 className="text-sm font-black text-gray-800 uppercase mb-4 flex items-center gap-2">
         <Activity className="w-4 h-4 text-blue-600" />
-        Today's Operational Row
+        Operational Awareness
       </h3>
       {/* Today's Operational Row */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -265,9 +279,9 @@ function Dashboardpage() {
             <Package className="w-8 h-8 text-emerald-600" />
           </div>
           <div className="flex-1">
-            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Today's Stock IN</p>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Stock Received (Today)</p>
             <h2 className="text-3xl font-black text-gray-800">{stats.todayStockIn}</h2>
-            <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-tighter">Units Received Today</p>
+            <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-tighter">Stock IN movement</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6">
@@ -275,19 +289,19 @@ function Dashboardpage() {
             <TrendingUp className="w-8 h-8 text-blue-600" />
           </div>
           <div className="flex-1">
-            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Today's Stock OUT</p>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Stock Dispatched (Today)</p>
             <h2 className="text-3xl font-black text-gray-800">{stats.todayStockOut}</h2>
-            <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-tighter">Units Sold Today</p>
+            <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-tighter">Stock OUT movement</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between">
           <div>
-            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1 font-black">Total Available Stock</p>
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1 font-black">Net Available Stock</p>
             <h2 className="text-4xl font-black text-gray-800">{stats.totalAvailableStock.toLocaleString()}</h2>
           </div>
           <div className="mt-4 flex items-center text-[10px] font-black text-gray-500 bg-gray-50 w-fit px-3 py-1 rounded-full uppercase tracking-widest">
             <ShieldCheck className="w-3 h-3 mr-1 text-emerald-500" />
-            Net Inventory Balance
+            Inventory Stability
           </div>
         </div>
       </section>
@@ -465,8 +479,8 @@ function Dashboardpage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           <HealthBadge count={stats.deadStockCount} label="Dead Stock (180d+)" type="danger" />
           <HealthBadge count={stats.slowStockCount} label="Slow Stock (90d+)" type="warning" />
-          <HealthBadge count={stats.criticalStockCount} label="Critical Level" type="danger" />
-          <HealthBadge count={stats.reorderRequiredCount} label="Reorder Needed" type="info" />
+          <HealthBadge count={stats.criticalStockCount} label="Critical Level" type="danger" onClick={() => setIsLowStockModalOpen(true)} />
+          <HealthBadge count={stats.reorderRequiredCount} label="Reorder Needed" type="info" onClick={() => setIsLowStockModalOpen(true)} />
         </div>
       </section>
 

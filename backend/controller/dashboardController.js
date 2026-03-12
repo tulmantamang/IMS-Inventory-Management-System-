@@ -79,8 +79,7 @@ module.exports.getDashboardSummary = async (req, res) => {
             deadSlowStock,
             stockHealth,
             reorderPrediction,
-            lowCriticalStock,
-            inventoryValueData,
+            productDerivedStats,
             inventoryValueSevenDaysAgo,
             topAndLeastSellingProducts
         ] = await Promise.all([
@@ -90,13 +89,13 @@ module.exports.getDashboardSummary = async (req, res) => {
             // 2. Sales Growth Percentage (Weekly)
             calculateSalesGrowth(startOfCurrentWeek, startOfPreviousWeek),
 
-            // 3. Monthly Profit Calculation
+            // 3. Monthly Profit Calculation (Corrected for discounts)
             calculateMonthlyProfit(startOfCurrentMonth),
 
             // 4. Stock Movement Velocity (Last 30 Days)
             calculateStockVelocity(thirtyDaysAgo),
 
-            // 5. Dead Stock & Slow Stock Detection
+            // 5. Dead Stock & Slow Stock Detection (90/180 days)
             calculateDeadSlowStock(ninetyDaysAgo, oneEightyDaysAgo),
 
             // 6. Stock Health Ratio (Coverage-Based)
@@ -105,18 +104,17 @@ module.exports.getDashboardSummary = async (req, res) => {
             // 7. Reorder Prediction (Rule-Based)
             calculateReorderPrediction(thirtyDaysAgo),
 
-            // 8. Low & Critical Stock Detection
-            calculateLowCriticalStock(),
+            // 8. Optimized Product Metrics (Combined Aggregation)
+            calculateProductStats(),
 
-            // 9. Inventory Value Calculation (Current)
-            calculateInventoryValue(),
-
-            // 10. Inventory Value 7 Days Ago (for change percentage)
+            // 9. Inventory Value 7 Days Ago (for change percentage)
             calculateInventoryValueAtDate(sevenDaysAgo),
 
-            // Top and Least Selling Products (Last 7 Days)
+            // 10. Top and Least Selling Products (Last 7 Days)
             calculateTopAndLeastSellingProducts(sevenDaysAgo)
         ]);
+
+        const { inventoryValue: inventoryValueData, lowStockCount, criticalStockCount, lowStockDetails } = productDerivedStats;
 
         // Calculate inventory value change percentage
         const inventoryValueChangePercent = inventoryValueSevenDaysAgo > 0
@@ -125,7 +123,7 @@ module.exports.getDashboardSummary = async (req, res) => {
 
         // Generate rule-based alerts
         const alerts = generateAlerts({
-            criticalStockCount: lowCriticalStock.criticalStockCount,
+            criticalStockCount: criticalStockCount,
             deadStockCount: deadSlowStock.deadStockCount,
             salesGrowthPercent: salesGrowth,
             reorderRequiredCount: reorderPrediction
@@ -145,7 +143,6 @@ module.exports.getDashboardSummary = async (req, res) => {
             todayStockIn: todayStockInOut.stockIn,
             todayStockOut: todayStockInOut.stockOut,
             salesGrowthPercent: parseFloat(salesGrowth.toFixed(2)),
-            monthlyProfit: parseFloat(monthlyProfit.toFixed(2)),
             inventoryValue: parseFloat(inventoryValueData.toFixed(2)),
             inventoryValueChangePercent: parseFloat(inventoryValueChangePercent.toFixed(2)),
             fastMovingCount: stockVelocity.fastMovingCount,
@@ -153,17 +150,20 @@ module.exports.getDashboardSummary = async (req, res) => {
             slowMovingCount: stockVelocity.slowMovingCount,
             slowStockCount: deadSlowStock.slowStockCount,
             deadStockCount: deadSlowStock.deadStockCount,
-            lowStockCount: lowCriticalStock.lowStockCount,
-            criticalStockCount: lowCriticalStock.criticalStockCount,
+            lowStockCount: lowStockCount,
+            criticalStockCount: criticalStockCount,
             healthyStockCount: stockHealth.healthyStockCount,
             overstockCount: stockHealth.overstockCount,
             criticalCoverageCount: stockHealth.criticalCoverageCount,
             reorderRequiredCount: reorderPrediction,
             alerts: alerts,
             // New Detail Arrays
-            lowStockDetails: lowCriticalStock.lowStockDetails,
+            lowStockDetails: lowStockDetails,
             mostSellingProducts: topAndLeastSellingProducts.mostSellingProducts,
-            leastSellingProducts: topAndLeastSellingProducts.leastSellingProducts
+            leastSellingProducts: topAndLeastSellingProducts.leastSellingProducts,
+            // Comparison Data
+            monthlyRevenue: parseFloat(monthlyProfit.totalRevenue.toFixed(2)),
+            monthlyProfit: parseFloat(monthlyProfit.profit.toFixed(2))
         });
 
     } catch (error) {
@@ -234,21 +234,37 @@ async function calculateSalesGrowth(startOfCurrentWeek, startOfPreviousWeek) {
 async function calculateMonthlyProfit(startOfCurrentMonth) {
     const monthlySales = await Sale.aggregate([
         { $match: { saleDate: { $gte: startOfCurrentMonth } } },
-        { $unwind: "$products" },
         {
             $project: {
-                profit: {
-                    $multiply: [
-                        { $subtract: ["$products.price", "$products.costPrice"] },
-                        "$products.quantity"
-                    ]
+                revenue: { $subtract: ["$subtotal", "$discountAmount"] },
+                totalCost: {
+                    $reduce: {
+                        input: "$products",
+                        initialValue: 0,
+                        in: { $add: ["$$value", { $multiply: ["$$this.costPrice", "$$this.quantity"] }] }
+                    }
                 }
             }
         },
-        { $group: { _id: null, totalProfit: { $sum: "$profit" } } }
+        {
+            $group: {
+                _id: null,
+                totalRevenue: { $sum: "$revenue" },
+                totalCost: { $sum: "$totalCost" }
+            }
+        },
+        {
+            $project: {
+                profit: { $subtract: ["$totalRevenue", "$totalCost"] },
+                totalRevenue: 1
+            }
+        }
     ]);
 
-    return monthlySales[0]?.totalProfit || 0;
+    return {
+        profit: monthlySales[0]?.profit || 0,
+        totalRevenue: monthlySales[0]?.totalRevenue || 0
+    };
 }
 
 /**
@@ -441,51 +457,54 @@ async function calculateReorderPrediction(thirtyDaysAgo) {
 }
 
 /**
- * Algorithm 8: Low & Critical Stock Detection (Static Rule)
- * - Low Stock: current_stock ≤ reorderLevel
- * - Critical Stock: current_stock ≤ reorderLevel / 2
+ * Algorithm 8 & 9 Combined: Optimized Product Stats
+ * Calculates inventory value, low stock counts, and critical details in one pass.
  */
-async function calculateLowCriticalStock() {
-    const lowStockProducts = await Product.find({
-        status: 'Active',
-        $expr: { $lte: ["$total_stock", "$reorderLevel"] }
-    }).select('name total_stock reorderLevel').sort({ total_stock: 1 }).lean();
-
-    const lowStockDetails = lowStockProducts.map(product => {
-        let status = "Low";
-        if (product.total_stock <= product.reorderLevel / 2) {
-            status = "Critical";
-        }
-        return {
-            productName: product.name,
-            currentStock: product.total_stock,
-            reorderLevel: product.reorderLevel,
-            status: status
-        };
-    });
-
-    const criticalStockCount = lowStockDetails.filter(p => p.status === "Critical").length;
-    const lowStockCount = lowStockDetails.length;
-
-    return { lowStockCount, criticalStockCount, lowStockDetails };
-}
-
-/**
- * Algorithm 9: Inventory Value Calculation
- * Inventory Value = SUM(Current Stock × Cost Price)
- */
-async function calculateInventoryValue() {
-    const inventoryValueResult = await Product.aggregate([
+async function calculateProductStats() {
+    const results = await Product.aggregate([
         { $match: { status: 'Active' } },
         {
             $project: {
-                value: { $multiply: ["$total_stock", "$current_cost_price"] }
+                name: 1,
+                total_stock: 1,
+                reorderLevel: 1,
+                value: { $multiply: ["$total_stock", { $ifNull: ["$current_cost_price", 0] }] },
+                isLow: { $lte: ["$total_stock", "$reorderLevel"] },
+                isCritical: { $lte: ["$total_stock", { $divide: ["$reorderLevel", 2] }] }
             }
         },
-        { $group: { _id: null, totalValue: { $sum: "$value" } } }
+        {
+            $group: {
+                _id: null,
+                totalValue: { $sum: "$value" },
+                lowStockCount: { $sum: { $cond: ["$isLow", 1, 0] } },
+                criticalStockCount: { $sum: { $cond: ["$isCritical", 1, 0] } },
+                allLowStockProducts: {
+                    $push: {
+                        $cond: [
+                            "$isLow",
+                            {
+                                productName: "$name",
+                                currentStock: "$total_stock",
+                                reorderLevel: "$reorderLevel",
+                                status: { $cond: ["$isCritical", "Critical", "Low"] }
+                            },
+                            "$$REMOVE"
+                        ]
+                    }
+                }
+            }
+        }
     ]);
 
-    return inventoryValueResult[0]?.totalValue || 0;
+    const stats = results[0] || { totalValue: 0, lowStockCount: 0, criticalStockCount: 0, allLowStockProducts: [] };
+
+    return {
+        inventoryValue: stats.totalValue,
+        lowStockCount: stats.lowStockCount,
+        criticalStockCount: stats.criticalStockCount,
+        lowStockDetails: stats.allLowStockProducts.sort((a, b) => a.currentStock - b.currentStock)
+    };
 }
 
 /**

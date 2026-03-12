@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Supplier = require('./models/Suppliermodel');
+const Supplier = require('../models/Suppliermodel');
 
 async function checkRaw() {
     try {

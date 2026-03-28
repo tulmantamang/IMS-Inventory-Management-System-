@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import axiosInstance from "../lib/axios";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchSettings } from "../features/settingsSlice";
-import { AlertTriangle, Wallet, Package, Clock, TrendingUp, TrendingDown, Users, ArrowUpRight, ArrowDownRight, Activity, ShieldCheck, Zap, ChevronRight } from "lucide-react";
+import { AlertTriangle, Wallet, Package, Clock, TrendingUp, TrendingDown, Users, ArrowUpRight, ArrowDownRight, Activity, ShieldCheck, Zap, ChevronRight, Bell } from "lucide-react";
 import { motion } from "framer-motion";
-import { Bar } from "react-chartjs-2";
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -67,9 +67,11 @@ function Dashboardpage() {
     mostSellingProducts: [],
     leastSellingProducts: [],
     monthlyRevenue: 0,
-    monthlyProfit: 0
+    monthlyProfit: 0,
+    dailyRevenue: []
   });
   const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const { data: settings } = useSelector((state) => state.settings);
   const dispatch = useDispatch();
@@ -91,23 +93,46 @@ function Dashboardpage() {
     dispatch(fetchSettings());
   }, [dispatch]);
 
-  const aggregatedSales = (stats.recentSales || []).reduce((acc, sale) => {
-    const date = new Date(sale.createdAt).toLocaleDateString();
-    if (!acc[date]) acc[date] = { total: 0, count: 0 };
-    acc[date].total += sale.totalAmount;
-    acc[date].count += 1;
+  // Generate the last 7 days array to ensure no gaps in the chart
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split('T')[0]; // YYYY-MM-DD
+  });
+
+  // Map the backend data
+  const revenueMap = (stats.dailyRevenue || []).reduce((acc, item) => {
+    acc[item._id] = { total: item.totalRevenue, count: item.transactionCount };
     return acc;
   }, {});
 
+  // Chart Data Preparation (Chronological)
+  const chartLabels = last7Days.map(dateStr => new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
+  const chartValues = last7Days.map(dateStr => revenueMap[dateStr]?.total || 0);
+  const chartCounts = last7Days.map(dateStr => revenueMap[dateStr]?.count || 0);
+
   const chartData = {
-    labels: Object.keys(aggregatedSales).slice(-7), // Last 7 days
+    labels: chartLabels,
     datasets: [
       {
         label: 'Daily Revenue',
-        data: Object.values(aggregatedSales).slice(-7).map(d => d.total),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-        borderRadius: 8,
-        hoverBackgroundColor: '#2563eb',
+        data: chartValues,
+        borderColor: '#3b82f6', 
+        backgroundColor: (context) => {
+          const ctx = context.chart.ctx;
+          const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+          gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)'); 
+          gradient.addColorStop(1, 'rgba(59, 130, 246, 0.01)'); 
+          return gradient;
+        },
+        borderWidth: 3,
+        pointBackgroundColor: '#ffffff',
+        pointBorderColor: '#3b82f6',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: true,
+        tension: 0.4 // Smooth bezier curves
       }
     ]
   };
@@ -115,19 +140,28 @@ function Dashboardpage() {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#fff',
-        titleColor: '#1f2937',
-        bodyColor: '#4b5563',
-        borderColor: '#e5e7eb',
+        backgroundColor: '#ffffff',
+        titleColor: '#1e293b',
+        bodyColor: '#475569',
+        borderColor: '#e2e8f0',
         borderWidth: 1,
+        padding: 12,
+        displayColors: false,
         callbacks: {
           label: (context) => {
-            const date = context.label;
-            const data = aggregatedSales[date];
-            return [`Revenue: ${settings?.currency_symbol || 'Rs.'} ${context.parsed.y.toLocaleString()}`, `Transactions: ${data.count}`];
+            const val = context.parsed.y;
+            const cnt = chartCounts[context.dataIndex];
+            return [
+              `Revenue: ${settings?.currency_symbol || 'Rs.'} ${val.toLocaleString()}`, 
+              `Transactions: ${cnt}`
+            ];
           }
         }
       }
@@ -135,12 +169,12 @@ function Dashboardpage() {
     scales: {
       y: {
         beginAtZero: true,
-        grid: { color: '#f3f4f6', drawBorder: false },
-        ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } }
+        grid: { color: '#f1f5f9', drawBorder: false },
+        ticks: { color: '#94a3b8', font: { size: 10, weight: '600' }, maxTicksLimit: 6 }
       },
       x: {
         grid: { display: false },
-        ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } }
+        ticks: { color: '#94a3b8', font: { size: 10, weight: '600' } }
       }
     }
   };
@@ -177,23 +211,7 @@ function Dashboardpage() {
     </motion.div>
   );
 
-  const HealthBadge = ({ count, label, type, onClick }) => {
-    const configs = {
-      danger: "bg-red-50 text-red-600 border-red-100",
-      warning: "bg-amber-50 text-amber-600 border-amber-100",
-      info: "bg-blue-50 text-blue-600 border-blue-100",
-      success: "bg-emerald-50 text-emerald-600 border-emerald-100"
-    };
-    return (
-      <div 
-        onClick={onClick}
-        className={`flex flex-col items-center p-4 rounded-2xl border ${configs[type] || configs.info} ${onClick ? 'cursor-pointer hover:shadow-md transition-all' : ''}`}
-      >
-        <span className="text-2xl font-black">{count}</span>
-        <span className="text-[9px] font-black uppercase tracking-tighter text-center">{label}</span>
-      </div>
-    );
-  };
+
 
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-white">
@@ -203,6 +221,52 @@ function Dashboardpage() {
 
   return (
     <div className="px-8 pb-8 pt-4 bg-gray-50/50 min-h-screen font-sans text-gray-900">
+      {/* Header with Notification Bell */}
+      <div className="flex justify-end mb-4 relative z-40">
+        <button onClick={() => setIsAlertOpen(!isAlertOpen)} className="relative p-2 bg-white rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-all">
+          <Bell className="w-5 h-5 text-gray-600" />
+          {stats.alerts && stats.alerts.length > 0 && (
+            <span className="absolute top-0 right-0 flex items-center justify-center w-4 h-4 text-[9px] font-black text-white bg-red-500 rounded-full border-2 border-white">
+              {stats.alerts.length}
+            </span>
+          )}
+        </button>
+
+        {/* Dropdown Menu */}
+        {isAlertOpen && (
+           <motion.div 
+             initial={{ opacity: 0, y: 10 }}
+             animate={{ opacity: 1, y: 0 }}
+             className="absolute top-12 right-0 w-80 bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden"
+           >
+             <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
+               <h3 className="text-sm font-black text-gray-800 uppercase tracking-tight">System Alerts</h3>
+               <span className="text-[10px] font-black text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm">{stats.alerts?.length || 0} New</span>
+             </div>
+             <div className="max-h-72 overflow-y-auto custom-scrollbar">
+               {stats.alerts && stats.alerts.length > 0 ? (
+                 stats.alerts.map((alert, idx) => {
+                   const isCrit = alert.toLowerCase().includes('critical') || alert.toLowerCase().includes('dead') || alert.toLowerCase().includes('dropped');
+                   return (
+                     <div key={idx} className={`p-4 border-b border-gray-50 text-xs font-bold hover:bg-gray-50/50 transition-colors flex items-start gap-3 ${isCrit ? 'text-red-700' : 'text-gray-600'}`}>
+                       <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${isCrit ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'}`}></div>
+                       <span className="leading-snug">{alert}</span>
+                     </div>
+                   );
+                 })
+               ) : (
+                 <div className="p-8 text-center text-xs font-bold text-gray-400 uppercase tracking-widest flex flex-col items-center">
+                   <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
+                     <Bell className="w-6 h-6 text-gray-300" />
+                   </div>
+                   You're all caught up!
+                 </div>
+               )}
+             </div>
+           </motion.div>
+        )}
+      </div>
+
       {/* Advanced BI Analytics Cards */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 mt-4">
         {/* Sales Insight */}
@@ -212,12 +276,9 @@ function Dashboardpage() {
             <div className="flex items-baseline gap-2">
               <h2 className="text-3xl font-black text-white">{settings?.currency_symbol || 'Rs.'} {stats.monthlyProfit.toLocaleString()}</h2>
             </div>
-            {stats.salesGrowthPercent !== 0 && (
-              <div className={`mt-2 flex items-center text-[10px] font-black w-fit px-2 py-0.5 rounded-lg uppercase tracking-tighter ${stats.salesGrowthPercent >= 0 ? 'bg-emerald-400/20 text-emerald-100' : 'bg-red-400/20 text-red-100'}`}>
-                {stats.salesGrowthPercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                {stats.salesGrowthPercent >= 0 ? '+' : ''}{stats.salesGrowthPercent}% v/s Last Week
-              </div>
-            )}
+            <p className="text-[10px] font-black text-blue-100/80 mt-2 uppercase tracking-tight">
+              Computed by Revenue - Total Cost
+            </p>
           </div>
           <div className="mt-4 flex items-center text-[10px] font-black text-blue-100 bg-white/10 w-fit px-3 py-1 rounded-full uppercase tracking-widest">
             <Zap className="w-3 h-3 mr-1" />
@@ -391,7 +452,7 @@ function Dashboardpage() {
             </div>
           </div>
           <div className="flex-1 min-h-[350px]">
-            <Bar data={chartData} options={chartOptions} />
+            <Line data={chartData} options={chartOptions} />
           </div>
         </div>
 
@@ -470,19 +531,7 @@ function Dashboardpage() {
         </div>
       </section>
 
-      {/* Stock Health & Detection Grid */}
-      <section className="mb-8">
-        <h3 className="text-sm font-black text-gray-800 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-blue-600" />
-          Inventory Health Report
-        </h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-          <HealthBadge count={stats.deadStockCount} label="Dead Stock (180d+)" type="danger" />
-          <HealthBadge count={stats.slowStockCount} label="Slow Stock (90d+)" type="warning" />
-          <HealthBadge count={stats.criticalStockCount} label="Critical Level" type="danger" onClick={() => setIsLowStockModalOpen(true)} />
-          <HealthBadge count={stats.reorderRequiredCount} label="Reorder Needed" type="info" onClick={() => setIsLowStockModalOpen(true)} />
-        </div>
-      </section>
+
 
       {/* Low Stock Modal */}
       {isLowStockModalOpen && (
@@ -543,6 +592,8 @@ function Dashboardpage() {
           </motion.div>
         </div>
       )}
+
+
     </div>
   );
 }

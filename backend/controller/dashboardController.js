@@ -44,11 +44,14 @@ module.exports.getDashboardSummary = async (req, res) => {
         const ninetyDaysAgo = new Date(now);
         ninetyDaysAgo.setDate(now.getDate() - 90);
 
-        const oneEightyDaysAgo = new Date(now);
-        oneEightyDaysAgo.setDate(now.getDate() - 180);
+        const fifteenDaysAgo = new Date(now);
+        fifteenDaysAgo.setDate(now.getDate() - 15);
 
         const sevenDaysAgo = new Date(now);
         sevenDaysAgo.setDate(now.getDate() - 7);
+
+        const twentyFourHoursAgo = new Date(now);
+        twentyFourHoursAgo.setHours(now.getHours() - 24);
 
         // Legacy fields for backward compatibility
         const [totalProducts, totalSuppliers, totalCategories, totalAvailableStock, totalSalesValue, recentSales, recentActivities] = await Promise.all([
@@ -78,10 +81,13 @@ module.exports.getDashboardSummary = async (req, res) => {
             stockVelocity,
             deadSlowStock,
             stockHealth,
-            reorderPrediction,
+            reorderPredictionResult,
             productDerivedStats,
             inventoryValueSevenDaysAgo,
-            topAndLeastSellingProducts
+            topAndLeastSellingProducts,
+            highValueSales,
+            highValuePurchases,
+            dailyRevenue
         ] = await Promise.all([
             // 1. Daily Summary (Today's Stock IN and OUT)
             calculateDailyStockInOut(startOfToday),
@@ -95,8 +101,8 @@ module.exports.getDashboardSummary = async (req, res) => {
             // 4. Stock Movement Velocity (Last 30 Days)
             calculateStockVelocity(thirtyDaysAgo),
 
-            // 5. Dead Stock & Slow Stock Detection (90/180 days)
-            calculateDeadSlowStock(ninetyDaysAgo, oneEightyDaysAgo),
+            // 5. Dead Stock & Slow Stock Detection (15/30 days)
+            calculateDeadSlowStock(fifteenDaysAgo, thirtyDaysAgo),
 
             // 6. Stock Health Ratio (Coverage-Based)
             calculateStockHealth(thirtyDaysAgo),
@@ -111,10 +117,19 @@ module.exports.getDashboardSummary = async (req, res) => {
             calculateInventoryValueAtDate(sevenDaysAgo),
 
             // 10. Top and Least Selling Products (Last 7 Days)
-            calculateTopAndLeastSellingProducts(sevenDaysAgo)
+            calculateTopAndLeastSellingProducts(sevenDaysAgo),
+
+            // 11. High value sales & purchases in last 24h
+            calculateHighValueSales(twentyFourHoursAgo, 30000),
+            calculateHighValuePurchases(twentyFourHoursAgo, 30000),
+
+            // 12. Daily Revenue (Last 7 Days)
+            calculateDailyRevenue(sevenDaysAgo)
         ]);
 
         const { inventoryValue: inventoryValueData, lowStockCount, criticalStockCount, lowStockDetails } = productDerivedStats;
+        const reorderRequiredCount = reorderPredictionResult.reorderRequiredCount;
+        const reorderDetails = reorderPredictionResult.reorderDetails;
 
         // Calculate inventory value change percentage
         const inventoryValueChangePercent = inventoryValueSevenDaysAgo > 0
@@ -123,10 +138,12 @@ module.exports.getDashboardSummary = async (req, res) => {
 
         // Generate rule-based alerts
         const alerts = generateAlerts({
-            criticalStockCount: criticalStockCount,
-            deadStockCount: deadSlowStock.deadStockCount,
+            criticalStockDetails: lowStockDetails.filter(p => p.status === 'Critical'),
+            deadStockDetails: deadSlowStock.deadStockDetails,
             salesGrowthPercent: salesGrowth,
-            reorderRequiredCount: reorderPrediction
+            reorderDetails: reorderDetails,
+            highValueSales: highValueSales,
+            highValuePurchases: highValuePurchases
         });
 
         // Return comprehensive dashboard summary
@@ -150,13 +167,15 @@ module.exports.getDashboardSummary = async (req, res) => {
             slowMovingCount: stockVelocity.slowMovingCount,
             slowStockCount: deadSlowStock.slowStockCount,
             deadStockCount: deadSlowStock.deadStockCount,
+            deadStockDetails: deadSlowStock.deadStockDetails,
             lowStockCount: lowStockCount,
             criticalStockCount: criticalStockCount,
             healthyStockCount: stockHealth.healthyStockCount,
             overstockCount: stockHealth.overstockCount,
             criticalCoverageCount: stockHealth.criticalCoverageCount,
-            reorderRequiredCount: reorderPrediction,
+            reorderRequiredCount: reorderRequiredCount,
             alerts: alerts,
+            dailyRevenue: dailyRevenue,
             // New Detail Arrays
             lowStockDetails: lowStockDetails,
             mostSellingProducts: topAndLeastSellingProducts.mostSellingProducts,
@@ -311,41 +330,53 @@ async function calculateStockVelocity(thirtyDaysAgo) {
 
 /**
  * Algorithm 5: Dead Stock & Slow Stock Detection
- * - Slow Stock: No sales in last 90 days
- * - Dead Stock: No sales in last 180 days
+ * - Slow Stock: No sales in last 15 days
+ * - Dead Stock: No sales in last 30 days
  */
-async function calculateDeadSlowStock(ninetyDaysAgo, oneEightyDaysAgo) {
+async function calculateDeadSlowStock(recentDate, olderDate) {
     // Get all active products
-    const allProducts = await Product.find({ status: 'Active' }).select('_id');
+    const allProducts = await Product.find({ status: 'Active' }).select('_id name total_stock');
     const allProductIds = allProducts.map(p => p._id.toString());
+    const productMap = {};
+    allProducts.forEach(p => productMap[p._id.toString()] = p);
 
-    // Get products with sales in last 90 days
-    const productsWithRecentSales90 = await Sale.aggregate([
-        { $match: { saleDate: { $gte: ninetyDaysAgo } } },
+    // Get products with sales in recentDate
+    const productsWithRecentSales = await Sale.aggregate([
+        { $match: { saleDate: { $gte: recentDate } } },
         { $unwind: "$products" },
         { $group: { _id: "$products.product" } }
     ]);
-    const recentSalesIds90 = productsWithRecentSales90.map(p => p._id.toString());
+    const recentSalesIds = productsWithRecentSales.map(p => p._id.toString());
 
-    // Get products with sales in last 180 days
-    const productsWithRecentSales180 = await Sale.aggregate([
-        { $match: { saleDate: { $gte: oneEightyDaysAgo } } },
+    // Get products with sales in olderDate
+    const productsWithOlderSales = await Sale.aggregate([
+        { $match: { saleDate: { $gte: olderDate } } },
         { $unwind: "$products" },
         { $group: { _id: "$products.product" } }
     ]);
-    const recentSalesIds180 = productsWithRecentSales180.map(p => p._id.toString());
+    const olderSalesIds = productsWithOlderSales.map(p => p._id.toString());
 
-    // Slow stock: no sales in 90 days but has sales in 180 days
+    // Slow stock: no sales since recentDate but has sales since olderDate (and has stock)
     const slowStockCount = allProductIds.filter(id =>
-        !recentSalesIds90.includes(id) && recentSalesIds180.includes(id)
+        !recentSalesIds.includes(id) && olderSalesIds.includes(id) && productMap[id].total_stock > 0
     ).length;
 
-    // Dead stock: no sales in 180 days
-    const deadStockCount = allProductIds.filter(id =>
-        !recentSalesIds180.includes(id)
-    ).length;
+    // Dead stock: no sales since olderDate (and has stock)
+    const deadStockIds = allProductIds.filter(id =>
+        !olderSalesIds.includes(id) && productMap[id].total_stock > 0
+    );
 
-    return { slowStockCount, deadStockCount };
+    const deadStockDetails = deadStockIds.map(id => ({
+        productName: productMap[id].name,
+        currentStock: productMap[id].total_stock,
+        status: 'Dead Stock'
+    })).sort((a, b) => b.currentStock - a.currentStock);
+
+    return { 
+        slowStockCount, 
+        deadStockCount: deadStockIds.length,
+        deadStockDetails
+    };
 }
 
 /**
@@ -440,20 +471,27 @@ async function calculateReorderPrediction(thirtyDaysAgo) {
     });
 
     // Get all products
-    const products = await Product.find({ status: 'Active' }).select('_id total_stock');
+    const products = await Product.find({ status: 'Active' }).select('_id name total_stock');
 
-    let reorderRequiredCount = 0;
+    const reorderDetails = [];
 
     products.forEach(product => {
         const avgDailySales = avgDailySalesMap[product._id.toString()] || 0;
         const reorderThreshold = avgDailySales * 15;
 
         if (product.total_stock < reorderThreshold && avgDailySales > 0) {
-            reorderRequiredCount++;
+            reorderDetails.push({
+                productName: product.name,
+                currentStock: product.total_stock,
+                reorderThreshold: Math.ceil(reorderThreshold)
+            });
         }
     });
 
-    return reorderRequiredCount;
+    return {
+        reorderRequiredCount: reorderDetails.length,
+        reorderDetails
+    };
 }
 
 /**
@@ -558,7 +596,7 @@ async function calculateInventoryValueAtDate(date) {
  * Top & Least Selling Products (Last 7 Days)
  */
 async function calculateTopAndLeastSellingProducts(sevenDaysAgo) {
-    const mostSellingProducts = await Sale.aggregate([
+    const allSales = await Sale.aggregate([
         { $match: { saleDate: { $gte: sevenDaysAgo } } },
         { $unwind: "$products" },
         {
@@ -568,23 +606,19 @@ async function calculateTopAndLeastSellingProducts(sevenDaysAgo) {
                 totalSold: { $sum: "$products.quantity" }
             }
         },
-        { $sort: { totalSold: -1 } },
-        { $limit: 5 }
+        { $sort: { totalSold: -1 } }
     ]);
 
-    const leastSellingProducts = await Sale.aggregate([
-        { $match: { saleDate: { $gte: sevenDaysAgo } } },
-        { $unwind: "$products" },
-        {
-            $group: {
-                _id: "$products.product",
-                productName: { $first: "$products.name" },
-                totalSold: { $sum: "$products.quantity" }
-            }
-        },
-        { $sort: { totalSold: 1 } },
-        { $limit: 5 }
-    ]);
+    const mostSellingProducts = allSales.slice(0, 5);
+    
+    // For least selling, take from the bottom, but exclude any that are already in mostSellingProducts
+    let leastSellingProducts = [];
+    if (allSales.length > 5) {
+        const reversed = [...allSales].reverse();
+        leastSellingProducts = reversed.filter(item => 
+            !mostSellingProducts.some(mostItem => mostItem._id.toString() === item._id.toString())
+        ).slice(0, 5);
+    }
 
     return {
         mostSellingProducts,
@@ -599,27 +633,96 @@ async function calculateTopAndLeastSellingProducts(sevenDaysAgo) {
 function generateAlerts(data) {
     const alerts = [];
 
-    if (data.criticalStockCount > 0) {
-        alerts.push(`${data.criticalStockCount} product${data.criticalStockCount > 1 ? 's are' : ' is'} critically low in stock.`);
+    if (data.criticalStockDetails && data.criticalStockDetails.length > 0) {
+        if (data.criticalStockDetails.length <= 3) {
+            data.criticalStockDetails.forEach(p => {
+                alerts.push(`Critical Stock: ${p.productName} is dangerously low (${p.currentStock} left).`);
+            });
+        } else {
+            alerts.push(`${data.criticalStockDetails.length} products are critically low in stock (e.g., ${data.criticalStockDetails.slice(0, 2).map(p=>p.productName).join(', ')}).`);
+        }
     }
 
-    if (data.deadStockCount > 0) {
-        alerts.push(`${data.deadStockCount} product${data.deadStockCount > 1 ? 's are' : ' is'} dead stock (no sales in 180 days).`);
+    if (data.deadStockDetails && data.deadStockDetails.length > 0) {
+        if (data.deadStockDetails.length <= 3) {
+            data.deadStockDetails.forEach(p => {
+                alerts.push(`Dead Stock: ${p.productName} has not sold in 30 days.`);
+            });
+        } else {
+            alerts.push(`${data.deadStockDetails.length} products are dead stock (e.g., ${data.deadStockDetails.slice(0, 2).map(p=>p.productName).join(', ')}).`);
+        }
     }
 
     if (data.salesGrowthPercent < -20) {
         alerts.push(`Sales dropped by ${Math.abs(data.salesGrowthPercent).toFixed(1)}% this week.`);
     }
 
-    if (data.reorderRequiredCount > 0) {
-        alerts.push(`${data.reorderRequiredCount} product${data.reorderRequiredCount > 1 ? 's require' : ' requires'} reordering based on sales velocity.`);
+    if (data.reorderDetails && data.reorderDetails.length > 0) {
+         if (data.reorderDetails.length <= 3) {
+            data.reorderDetails.forEach(p => {
+                alerts.push(`Velocity Alert: ${p.productName} is selling fast. Reorder soon!`);
+            });
+        } else {
+            alerts.push(`${data.reorderDetails.length} products require reordering based on velocity (e.g., ${data.reorderDetails.slice(0, 2).map(p=>p.productName).join(', ')}).`);
+        }
     }
 
     if (data.salesGrowthPercent > 20) {
-        alerts.push(`Great news! Sales increased by ${data.salesGrowthPercent.toFixed(1)}% this week.`);
+        if (data.salesGrowthPercent > 200) {
+            alerts.push(`Great news! Sales have more than doubled this week!`);
+        } else if (data.salesGrowthPercent > 100) {
+            alerts.push(`Great news! Sales increased by over 100% this week!`);
+        } else {
+            alerts.push(`Great news! Sales increased by ${data.salesGrowthPercent.toFixed(1)}% this week.`);
+        }
+    }
+
+    if (data.highValueSales && data.highValueSales.length > 0) {
+        data.highValueSales.forEach(sale => {
+            alerts.push(`Large Sale Processed: Invoice #${sale.invoiceNumber} for Rs. ${sale.totalAmount.toLocaleString()}`);
+        });
+    }
+
+    if (data.highValuePurchases && data.highValuePurchases.length > 0) {
+        data.highValuePurchases.forEach(purchase => {
+            alerts.push(`Large Purchase Delivered: Stock worth Rs. ${purchase.totalAmount.toLocaleString()} added to inventory.`);
+        });
     }
 
     return alerts;
+}
+
+async function calculateHighValueSales(since, threshold) {
+    const highSales = await Sale.find({
+        saleDate: { $gte: since },
+        totalAmount: { $gte: threshold }
+    }).select('invoiceNumber totalAmount').sort({ saleDate: -1 });
+    
+    return highSales;
+}
+
+async function calculateHighValuePurchases(since, threshold) {
+    const highPurchases = await Purchase.find({
+        purchaseDate: { $gte: since },
+        totalAmount: { $gte: threshold }
+    }).select('invoiceNumber totalAmount').sort({ purchaseDate: -1 });
+    
+    return highPurchases;
+}
+
+async function calculateDailyRevenue(sevenDaysAgo) {
+    const dailySales = await Sale.aggregate([
+        { $match: { saleDate: { $gte: sevenDaysAgo } } },
+        {
+            $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$saleDate" } },
+                totalRevenue: { $sum: "$totalAmount" },
+                transactionCount: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } }
+    ]);
+    return dailySales;
 }
 
 // Keep backward compatibility with old endpoint
